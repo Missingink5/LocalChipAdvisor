@@ -12,6 +12,7 @@ from local_chip_advisor.ranking import (
 )
 from local_chip_advisor.recommendation import (
     build_recommendation_result,
+    candidate_issues,
     recommend_from_published_catalog,
 )
 from local_chip_advisor.screening import (
@@ -165,3 +166,45 @@ def test_recommend_from_published_catalog_runs_end_to_end(
     ) == (
         "MPS-MP4570",
     )
+
+
+def test_candidate_issues_exposes_unknown_verification_reason(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    evidence = reviewed_evidence()
+
+    product = prepare_published_product(
+        product=publishable_draft(),
+        evidence=evidence,
+    )
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    result = recommend_from_published_catalog(
+        database_path=database_path,
+        knowledge_base_version="kb-dev-v1",
+        requirements=confirmed_requirements(),
+        policy=RankingPolicy(
+            criteria=(RankingCriterion.CURRENT_HEADROOM,),
+        ),
+    )
+
+    candidate = result.needs_verification[0]
+    issues = candidate_issues(candidate)
+
+    assert len(issues) == 1
+
+    issue = issues[0]
+
+    assert issue.rule_id == "thermal.ambient"
+    assert issue.state.value == "UNKNOWN"
+    assert issue.requirement.startswith("ambient maximum=70")
+    assert issue.actual is None
+    assert "junction-temperature limits alone" in issue.reason
+    assert issue.evidence == ()

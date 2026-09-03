@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from local_chip_advisor.domain import EvidenceRef, RequirementCard
+from local_chip_advisor.domain import (
+    CheckState,
+    EvidenceRef,
+    RequirementCard,
+)
 from local_chip_advisor.ranking import (
     CriterionResult,
     RankingPolicy,
@@ -35,6 +39,18 @@ class RecommendationResult:
     formal: tuple[FormalRecommendation, ...]
     near_match: tuple[ScreenedCandidate, ...]
     needs_verification: tuple[ScreenedCandidate, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateIssue:
+    """One failed or unresolved hard-constraint issue."""
+
+    rule_id: str
+    state: CheckState
+    requirement: str
+    actual: str | None
+    reason: str
+    evidence: tuple[EvidenceRef, ...]
 
 
 def _key_evidence(
@@ -130,3 +146,46 @@ def recommend_from_published_catalog(
         policy=policy,
         formal_limit=formal_limit,
     )
+
+
+def candidate_issues(
+    candidate: ScreenedCandidate,
+) -> tuple[CandidateIssue, ...]:
+    """Extract FAIL and UNKNOWN checks with program-bound evidence."""
+
+    evidence_by_id = {
+        item.evidence_id: item
+        for item in candidate.evidence
+    }
+
+    issues: list[CandidateIssue] = []
+
+    for check in candidate.evaluation.checks:
+        if check.state is CheckState.PASS:
+            continue
+
+        bound_evidence: list[EvidenceRef] = []
+
+        for evidence_id in check.evidence_ids:
+            if evidence_id not in evidence_by_id:
+                raise ValueError(
+                    f"candidate issue references missing evidence: "
+                    f"{candidate.product_id} / {evidence_id}"
+                )
+
+            bound_evidence.append(
+                evidence_by_id[evidence_id]
+            )
+
+        issues.append(
+            CandidateIssue(
+                rule_id=check.rule_id,
+                state=check.state,
+                requirement=check.requirement,
+                actual=check.actual,
+                reason=check.reason,
+                evidence=tuple(bound_evidence),
+            )
+        )
+
+    return tuple(issues)
