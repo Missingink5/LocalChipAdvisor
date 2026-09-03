@@ -3,7 +3,7 @@
 from decimal import Decimal
 
 from local_chip_advisor.domain import CheckState, SurgeKnowledge
-from local_chip_advisor.domain.product_rules import check_continuous_output_current, check_input_surge, check_input_voltage, check_output_voltage, check_peak_output_current
+from local_chip_advisor.domain.product_rules import check_continuous_output_current, check_input_surge, check_input_voltage, check_output_voltage, check_peak_output_current, check_ambient_thermal
 from test_product_record import valid_product
 
 
@@ -296,5 +296,59 @@ def test_peak_output_current_is_unknown_without_duration_rating() -> None:
         requested_peak_duration_ms=Decimal("5"),
     )
 
+    assert result.state is CheckState.UNKNOWN
+    assert result.evidence_ids == ()
+
+def test_ambient_thermal_passes_with_explicit_ambient_rating() -> None:
+    product = valid_product(
+        ambient_temp_max_c="85",
+        evidence_ids_by_field=(
+            ("ambient_temp_max_c", ("ev:ambient",)),
+        ),
+    )
+
+    result = check_ambient_thermal(
+        product=product,
+        ambient_max_c=Decimal("70"),
+        thermal_conditions="natural convection; normal PCB mounting",
+    )
+
+    assert result.rule_id == "thermal.ambient"
+    assert result.state is CheckState.PASS
+    assert result.evidence_ids == ("ev:ambient",)
+
+
+def test_ambient_thermal_fails_above_explicit_ambient_rating() -> None:
+    product = valid_product(
+        ambient_temp_max_c="85",
+        evidence_ids_by_field=(
+            ("ambient_temp_max_c", ("ev:ambient",)),
+        ),
+    )
+
+    result = check_ambient_thermal(
+        product=product,
+        ambient_max_c=Decimal("100"),
+        thermal_conditions="natural convection; normal PCB mounting",
+    )
+
+    assert result.state is CheckState.FAIL
+
+
+def test_ambient_thermal_is_unknown_when_only_junction_rating_exists() -> None:
+    product = valid_product(
+        junction_temp_max_c="125",
+        evidence_ids_by_field=(
+            ("junction_temp_max_c", ("ev:tj",)),
+        ),
+    )
+
+    result = check_ambient_thermal(
+        product=product,
+        ambient_max_c=Decimal("70"),
+        thermal_conditions="natural convection; normal PCB mounting",
+    )
+
+    assert result.rule_id == "thermal.ambient"
     assert result.state is CheckState.UNKNOWN
     assert result.evidence_ids == ()

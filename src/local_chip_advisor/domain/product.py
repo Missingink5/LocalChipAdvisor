@@ -55,6 +55,7 @@ class BuckProductRecord(FrozenModel):
     feedback_reference_v: Decimal | None = Field(default=None, gt=0)
 
     # Thermal / package
+    ambient_temp_max_c: Decimal | None = None
     junction_temp_min_c: Decimal | None = None
     junction_temp_max_c: Decimal | None = None
     package: str | None = None

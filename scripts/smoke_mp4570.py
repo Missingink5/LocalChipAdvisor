@@ -18,6 +18,7 @@ from local_chip_advisor.domain.product_rules import (
     check_input_voltage,
     check_output_voltage,
     check_peak_output_current,
+    check_ambient_thermal,
 )
 from local_chip_advisor.ingestion import parse_pdf
 
@@ -82,6 +83,11 @@ checks = (
         product=product,
         requested_iout_peak_a=Decimal("3"),
         requested_peak_duration_ms=Decimal("10"),
+    ),
+    check_ambient_thermal(
+        product=product,
+        ambient_max_c=Decimal("70"),
+        thermal_conditions="natural convection; normal PCB mounting",
     ),
 )
 
