@@ -2,8 +2,8 @@
 
 from decimal import Decimal
 
-from local_chip_advisor.domain import CheckState
-from local_chip_advisor.domain.product_rules import check_continuous_output_current, check_input_voltage, check_output_voltage
+from local_chip_advisor.domain import CheckState, SurgeKnowledge
+from local_chip_advisor.domain.product_rules import check_continuous_output_current, check_input_surge, check_input_voltage, check_output_voltage
 from test_product_record import valid_product
 
 
@@ -178,5 +178,47 @@ def test_continuous_output_current_is_unknown_without_evidence() -> None:
         requested_iout_a=Decimal("2"),
     )
 
+    assert result.state is CheckState.UNKNOWN
+    assert result.evidence_ids == ()
+
+def test_input_surge_passes_when_user_confirms_none_expected() -> None:
+    product = valid_product(
+        vin_max_v="55",
+        vin_absolute_max_v="60",
+        evidence_ids_by_field=(
+            ("vin_max_v", ("ev:mp4570:vin-range",)),
+        ),
+    )
+
+    result = check_input_surge(
+        product=product,
+        surge_knowledge=SurgeKnowledge.NONE_EXPECTED,
+        surge_voltage_v=None,
+        surge_duration_ms=None,
+    )
+
+    assert result.rule_id == "surge.input"
+    assert result.field_name == "vin.range"
+    assert result.state is CheckState.PASS
+    assert result.evidence_ids == ("ev:mp4570:vin-range",)
+
+
+def test_input_surge_is_unknown_when_real_surge_has_no_transient_rating() -> None:
+    product = valid_product(
+        vin_max_v="55",
+        vin_absolute_max_v="60",
+        evidence_ids_by_field=(
+            ("vin_max_v", ("ev:mp4570:vin-range",)),
+        ),
+    )
+
+    result = check_input_surge(
+        product=product,
+        surge_knowledge=SurgeKnowledge.PRESENT,
+        surge_voltage_v=Decimal("58"),
+        surge_duration_ms=Decimal("1"),
+    )
+
+    assert result.rule_id == "surge.input"
     assert result.state is CheckState.UNKNOWN
     assert result.evidence_ids == ()

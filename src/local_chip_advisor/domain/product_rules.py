@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from .models import CheckResult, CheckState
+from .models import CheckResult, CheckState, SurgeKnowledge
 from .product import BuckProductRecord
 
 
@@ -284,4 +284,87 @@ def check_continuous_output_current(
         actual=actual,
         reason=reason,
         evidence_ids=evidence_ids,
+    )
+
+def check_input_surge(
+    *,
+    product: BuckProductRecord,
+    surge_knowledge: SurgeKnowledge,
+    surge_voltage_v: Decimal | None,
+    surge_duration_ms: Decimal | None,
+) -> CheckResult:
+    """Check input-surge knowledge without treating Absolute Maximum as transient capability."""
+
+    if surge_knowledge is SurgeKnowledge.NONE_EXPECTED:
+        if surge_voltage_v is not None or surge_duration_ms is not None:
+            raise ValueError(
+                "surge values must be omitted when no surge is expected"
+            )
+
+        evidence_ids = product.evidence_ids_for("vin_max_v")
+
+        if not evidence_ids:
+            return CheckResult(
+                rule_id="surge.input",
+                field_name="surge.input",
+                state=CheckState.UNKNOWN,
+                requirement="no input surge expected",
+                actual=None,
+                reason="decisive normal input-voltage evidence is missing",
+            )
+
+        return CheckResult(
+            rule_id="surge.input",
+            field_name="vin.range",
+            state=CheckState.PASS,
+            requirement="no input surge expected",
+            actual="user confirmed no input surge is expected",
+            reason=(
+                "no separate transient-surge qualification is required "
+                "because the user explicitly confirmed no surge is expected"
+            ),
+            evidence_ids=evidence_ids,
+        )
+
+    if surge_knowledge is SurgeKnowledge.PRESENT:
+        if surge_voltage_v is None or surge_duration_ms is None:
+            raise ValueError(
+                "present surge requires surge_voltage_v and surge_duration_ms"
+            )
+
+        if surge_voltage_v <= 0 or surge_duration_ms <= 0:
+            raise ValueError(
+                "surge voltage and duration must be positive"
+            )
+
+        absolute_text = (
+            f"; Absolute Maximum VIN={product.vin_absolute_max_v}V "
+            "is not treated as a transient operating rating"
+            if product.vin_absolute_max_v is not None
+            else ""
+        )
+
+        return CheckResult(
+            rule_id="surge.input",
+            field_name="surge.input",
+            state=CheckState.UNKNOWN,
+            requirement=(
+                f"input surge={surge_voltage_v}V "
+                f"for {surge_duration_ms}ms"
+            ),
+            actual=None,
+            reason=(
+                "product transient input-surge capability is not "
+                "structurally qualified"
+                + absolute_text
+            ),
+        )
+
+    return CheckResult(
+        rule_id="surge.input",
+        field_name="surge.input",
+        state=CheckState.UNKNOWN,
+        requirement="input surge characteristics unknown",
+        actual=None,
+        reason="user has not characterized the input surge condition",
     )

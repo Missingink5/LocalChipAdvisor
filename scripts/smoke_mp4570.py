@@ -1,4 +1,4 @@
-﻿"""Real MP4570 evidence-bound smoke test loaded from the local draft catalog."""
+"""Real MP4570 evidence-bound smoke test loaded from the local draft catalog."""
 
 from __future__ import annotations
 
@@ -7,9 +7,14 @@ from decimal import Decimal
 from pathlib import Path
 
 from local_chip_advisor.catalog.io import load_draft_catalog
-from local_chip_advisor.domain import classify_candidate, validate_evidence_bindings
+from local_chip_advisor.domain import (
+    SurgeKnowledge,
+    classify_candidate,
+    validate_evidence_bindings,
+)
 from local_chip_advisor.domain.product_rules import (
     check_continuous_output_current,
+    check_input_surge,
     check_input_voltage,
     check_output_voltage,
 )
@@ -65,6 +70,12 @@ checks = (
     check_continuous_output_current(
         product=product,
         requested_iout_a=Decimal("2.5"),
+    ),
+    check_input_surge(
+        product=product,
+        surge_knowledge=SurgeKnowledge.NONE_EXPECTED,
+        surge_voltage_v=None,
+        surge_duration_ms=None,
     ),
 )
 
