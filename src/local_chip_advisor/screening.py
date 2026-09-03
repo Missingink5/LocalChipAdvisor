@@ -3,8 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
 
+from local_chip_advisor.catalog.sqlite_store import (
+    list_published_products,
+    load_published_catalog,
+)
 from local_chip_advisor.domain import (
+    CandidateBucket,
     CandidateEvaluation,
     EvidenceRef,
     RequirementCard,
@@ -108,3 +115,60 @@ def evaluate_candidate(
     )
 
     return evaluation
+
+
+@dataclass(frozen=True, slots=True)
+class CatalogScreeningResult:
+    """Deterministic three-bucket result for one published catalog."""
+
+    formal: tuple[CandidateEvaluation, ...]
+    near_match: tuple[CandidateEvaluation, ...]
+    needs_verification: tuple[CandidateEvaluation, ...]
+
+
+def screen_published_catalog(
+    *,
+    database_path: str | Path,
+    knowledge_base_version: str,
+    requirements: RequirementCard,
+) -> CatalogScreeningResult:
+    """Evaluate every published product without discarding near matches."""
+
+    products = list_published_products(
+        database_path=database_path,
+        knowledge_base_version=knowledge_base_version,
+    )
+
+    formal: list[CandidateEvaluation] = []
+    near_match: list[CandidateEvaluation] = []
+    needs_verification: list[CandidateEvaluation] = []
+
+    for product in products:
+        loaded_product, evidence = load_published_catalog(
+            database_path=database_path,
+            product_id=product.product_id,
+            knowledge_base_version=product.knowledge_base_version,
+        )
+
+        evaluation = evaluate_candidate(
+            product=loaded_product,
+            evidence=evidence,
+            requirements=requirements,
+        )
+
+        if evaluation.bucket is CandidateBucket.FORMAL:
+            formal.append(evaluation)
+        elif evaluation.bucket is CandidateBucket.NEAR_MATCH:
+            near_match.append(evaluation)
+        elif evaluation.bucket is CandidateBucket.NEEDS_VERIFICATION:
+            needs_verification.append(evaluation)
+        else:
+            raise ValueError(
+                f"unsupported candidate bucket: {evaluation.bucket}"
+            )
+
+    return CatalogScreeningResult(
+        formal=tuple(formal),
+        near_match=tuple(near_match),
+        needs_verification=tuple(needs_verification),
+    )

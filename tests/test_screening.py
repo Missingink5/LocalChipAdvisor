@@ -1,14 +1,19 @@
 """Application-level deterministic candidate screening."""
 
 from decimal import Decimal
+from pathlib import Path
 
 from local_chip_advisor.catalog.publication import prepare_published_product
+from local_chip_advisor.catalog.sqlite_store import save_published_catalog
 from local_chip_advisor.domain import (
     CandidateBucket,
     RequirementCard,
     SurgeKnowledge,
 )
-from local_chip_advisor.screening import evaluate_candidate
+from local_chip_advisor.screening import (
+    evaluate_candidate,
+    screen_published_catalog,
+)
 from test_publication_gate import publishable_draft, reviewed_evidence
 
 
@@ -68,3 +73,91 @@ def test_published_candidate_runs_all_required_rules() -> None:
     assert states["thermal.ambient"] == "UNKNOWN"
 
     assert evaluation.bucket is CandidateBucket.NEEDS_VERIFICATION
+
+def test_catalog_screening_preserves_near_matches(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    # MP4570 passes electrical checks but lacks an explicit ambient rating,
+    # so it should remain NEEDS_VERIFICATION.
+    main_evidence = reviewed_evidence()
+    main_product = prepare_published_product(
+        product=publishable_draft(),
+        evidence=main_evidence,
+    )
+
+    save_published_catalog(
+        database_path=database_path,
+        product=main_product,
+        evidence=main_evidence,
+    )
+
+    # Create a second reviewed product whose VIN maximum is only 24 V.
+    # For an 18-30 V requirement it must be retained as NEAR_MATCH,
+    # not disappear before deterministic evaluation.
+    id_map = {
+        "ev:vin": "ev:near24:vin",
+        "ev:vout": "ev:near24:vout",
+        "ev:iout": "ev:near24:iout",
+    }
+
+    near_draft = publishable_draft().model_copy(
+        update={
+            "product_id": "MPS-NEAR24",
+            "base_part_number": "NEAR24",
+            "orderable_part_numbers": ("NEAR24",),
+            "vin_max_v": Decimal("24"),
+            "evidence_ids_by_field": (
+                ("vin_min_v", ("ev:near24:vin",)),
+                ("vin_max_v", ("ev:near24:vin",)),
+                ("vout_min_v", ("ev:near24:vout",)),
+                ("vout_max_vin_ratio", ("ev:near24:vout",)),
+                ("iout_continuous_max_a", ("ev:near24:iout",)),
+            ),
+        }
+    )
+
+    near_evidence = tuple(
+        item.model_copy(
+            update={
+                "evidence_id": id_map[item.evidence_id],
+                "product_id": "MPS-NEAR24",
+                "excerpt": (
+                    "Supply Voltage VIN: 4.5V to 24V"
+                    if item.field_name == "vin.range"
+                    else item.excerpt
+                ),
+            }
+        )
+        for item in reviewed_evidence()
+    )
+
+    near_product = prepare_published_product(
+        product=near_draft,
+        evidence=near_evidence,
+    )
+
+    save_published_catalog(
+        database_path=database_path,
+        product=near_product,
+        evidence=near_evidence,
+    )
+
+    result = screen_published_catalog(
+        database_path=database_path,
+        knowledge_base_version="kb-dev-v1",
+        requirements=confirmed_requirements(),
+    )
+
+    assert result.formal == ()
+
+    assert tuple(
+        item.product_id
+        for item in result.near_match
+    ) == ("MPS-NEAR24",)
+
+    assert tuple(
+        item.product_id
+        for item in result.needs_verification
+    ) == ("MPS-MP4570",)
