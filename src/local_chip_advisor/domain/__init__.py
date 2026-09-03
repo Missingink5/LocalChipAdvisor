@@ -1,4 +1,4 @@
-"""Domain types and deterministic decision rules."""
+﻿"""Domain types and deterministic decision rules."""
 
 from .decision import EvidenceBindingError, classify_candidate, validate_evidence_bindings
 from .models import (
@@ -12,8 +12,10 @@ from .models import (
     RequirementCard,
     SurgeKnowledge,
 )
+from .product import BuckProductRecord
 
 __all__ = [
+    "BuckProductRecord",
     "CandidateBucket",
     "CandidateEvaluation",
     "CheckResult",
