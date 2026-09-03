@@ -14,6 +14,7 @@ from local_chip_advisor.requirements import (
     confirm_requirement_card,
     build_unconfirmed_requirement_card,
     RequirementParsePayload,
+    parse_requirement_payload_json,
 )
 
 
@@ -144,3 +145,35 @@ def test_parser_payload_cannot_set_user_confirmation() -> None:
                 "confirmed_by_user": True,
             }
         )
+
+
+def test_parse_requirement_payload_json_accepts_strict_json() -> None:
+    payload = parse_requirement_payload_json(
+        """
+        {
+          "vin_min_v": 18,
+          "vin_nominal_v": 24,
+          "vin_max_v": 30,
+          "vout_target_v": 5,
+          "iout_continuous_a": 2.5
+        }
+        """
+    )
+
+    assert payload.vin_min_v == Decimal("18")
+    assert payload.vin_nominal_v == Decimal("24")
+    assert payload.vin_max_v == Decimal("30")
+    assert payload.vout_target_v == Decimal("5")
+    assert payload.iout_continuous_a == Decimal("2.5")
+
+
+def test_parse_requirement_payload_json_rejects_markdown_fence() -> None:
+    response = """```json
+    {
+      "vin_nominal_v": 24,
+      "vout_target_v": 5
+    }
+    ```"""
+
+    with pytest.raises(ValidationError):
+        parse_requirement_payload_json(response)

@@ -103,3 +103,13 @@ def build_unconfirmed_requirement_card(
             "confirmed_by_user": False,
         }
     )
+
+
+def parse_requirement_payload_json(
+    response_text: str,
+) -> RequirementParsePayload:
+    """Validate one strict JSON parser response against the allowed schema."""
+
+    return RequirementParsePayload.model_validate_json(
+        response_text
+    )
