@@ -2,17 +2,23 @@
 
 from dataclasses import replace
 from decimal import Decimal
+from pathlib import Path
 
+from local_chip_advisor.catalog.publication import prepare_published_product
+from local_chip_advisor.catalog.sqlite_store import save_published_catalog
 from local_chip_advisor.ranking import (
     RankingCriterion,
     RankingPolicy,
 )
-from local_chip_advisor.recommendation import build_recommendation_result
+from local_chip_advisor.recommendation import (
+    build_recommendation_result,
+    recommend_from_published_catalog,
+)
 from local_chip_advisor.screening import (
     CatalogScreeningResult,
     ScreenedCandidate,
 )
-from test_publication_gate import reviewed_evidence
+from test_publication_gate import publishable_draft, reviewed_evidence
 from test_ranking import formal_candidate
 from test_screening import confirmed_requirements
 
@@ -119,3 +125,43 @@ def test_recommendation_result_keeps_top3_and_key_evidence() -> None:
 
     assert result.near_match == ()
     assert result.needs_verification == ()
+
+
+def test_recommend_from_published_catalog_runs_end_to_end(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    evidence = reviewed_evidence()
+
+    product = prepare_published_product(
+        product=publishable_draft(),
+        evidence=evidence,
+    )
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    result = recommend_from_published_catalog(
+        database_path=database_path,
+        knowledge_base_version="kb-dev-v1",
+        requirements=confirmed_requirements(),
+        policy=RankingPolicy(
+            criteria=(RankingCriterion.CURRENT_HEADROOM,),
+        ),
+    )
+
+    # MP4570 has no explicit reviewed ambient operating rating,
+    # so it must not become a formal recommendation.
+    assert result.formal == ()
+    assert result.near_match == ()
+
+    assert tuple(
+        item.product_id
+        for item in result.needs_verification
+    ) == (
+        "MPS-MP4570",
+    )
