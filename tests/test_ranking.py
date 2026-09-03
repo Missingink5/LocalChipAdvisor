@@ -13,9 +13,14 @@ from local_chip_advisor.ranking import (
     RankingCriterion,
     RankingPolicy,
     rank_formal_candidates,
+    rank_screening_result,
 )
-from local_chip_advisor.screening import ScreenedCandidate
+from local_chip_advisor.screening import (
+    CatalogScreeningResult,
+    ScreenedCandidate,
+)
 from test_publication_gate import publishable_draft
+from test_screening import confirmed_requirements
 
 
 def formal_candidate(
@@ -88,5 +93,44 @@ def test_explicit_current_headroom_policy_ranks_formal_candidates() -> None:
     )
 
     assert ranked[0].criteria[0].criterion is RankingCriterion.CURRENT_HEADROOM
+    assert ranked[0].criteria[0].value == Decimal("2.5")
+    assert ranked[1].criteria[0].value == Decimal("0.5")
+
+
+def test_rank_screening_result_uses_confirmed_requirement_card() -> None:
+    candidate_3a = formal_candidate(
+        product_id="MPS-3A",
+        base_part_number="BUCK3A",
+        continuous_current_a="3",
+    )
+
+    candidate_5a = formal_candidate(
+        product_id="MPS-5A",
+        base_part_number="BUCK5A",
+        continuous_current_a="5",
+    )
+
+    screening_result = CatalogScreeningResult(
+        formal=(candidate_3a, candidate_5a),
+        near_match=(),
+        needs_verification=(),
+    )
+
+    ranked = rank_screening_result(
+        screening_result=screening_result,
+        requirements=confirmed_requirements(),
+        policy=RankingPolicy(
+            criteria=(RankingCriterion.CURRENT_HEADROOM,),
+        ),
+    )
+
+    assert tuple(
+        item.candidate.product_id
+        for item in ranked
+    ) == (
+        "MPS-5A",
+        "MPS-3A",
+    )
+
     assert ranked[0].criteria[0].value == Decimal("2.5")
     assert ranked[1].criteria[0].value == Decimal("0.5")

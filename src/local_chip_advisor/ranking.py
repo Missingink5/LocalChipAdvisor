@@ -6,8 +6,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
-from local_chip_advisor.domain import CandidateBucket
-from local_chip_advisor.screening import ScreenedCandidate
+from local_chip_advisor.domain import CandidateBucket, RequirementCard
+from local_chip_advisor.screening import (
+    CatalogScreeningResult,
+    ScreenedCandidate,
+)
 
 
 class RankingCriterion(StrEnum):
@@ -128,4 +131,29 @@ def rank_formal_candidates(
             ),
             reverse=True,
         )
+    )
+
+
+def rank_screening_result(
+    *,
+    screening_result: CatalogScreeningResult,
+    requirements: RequirementCard,
+    policy: RankingPolicy,
+) -> tuple[RankedCandidate, ...]:
+    """Rank the FORMAL bucket using values from confirmed requirements."""
+
+    if not requirements.confirmed_by_user:
+        raise ValueError(
+            "requirements must be confirmed by the user before ranking"
+        )
+
+    if requirements.iout_continuous_a is None:
+        raise ValueError(
+            "confirmed requirements must include iout_continuous_a"
+        )
+
+    return rank_formal_candidates(
+        candidates=screening_result.formal,
+        required_continuous_current_a=requirements.iout_continuous_a,
+        policy=policy,
     )
