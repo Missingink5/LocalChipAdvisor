@@ -2,6 +2,9 @@
 
 from decimal import Decimal
 
+import pytest
+from pydantic import ValidationError
+
 from local_chip_advisor.domain import (
     RequirementCard,
     SurgeKnowledge,
@@ -9,6 +12,8 @@ from local_chip_advisor.domain import (
 from local_chip_advisor.requirements import (
     build_requirement_review,
     confirm_requirement_card,
+    build_unconfirmed_requirement_card,
+    RequirementParsePayload,
 )
 
 
@@ -106,3 +111,36 @@ def test_confirm_requirement_card_rejects_incomplete_card() -> None:
     assert "cannot confirm incomplete requirement card" in message
     assert "vin_min_v" in message
     assert "vin_max_v" in message
+
+
+def test_parser_payload_builds_unconfirmed_card_and_preserves_raw_request() -> None:
+    raw_request = "18-30V???24V?????5V???2.5A"
+
+    payload = RequirementParsePayload(
+        vin_min_v=Decimal("18"),
+        vin_nominal_v=Decimal("24"),
+        vin_max_v=Decimal("30"),
+        vout_target_v=Decimal("5"),
+        iout_continuous_a=Decimal("2.5"),
+    )
+
+    card = build_unconfirmed_requirement_card(
+        raw_request=raw_request,
+        parsed=payload,
+    )
+
+    assert card.raw_request == raw_request
+    assert card.vin_min_v == Decimal("18")
+    assert card.vin_nominal_v == Decimal("24")
+    assert card.vout_target_v == Decimal("5")
+    assert card.confirmed_by_user is False
+
+
+def test_parser_payload_cannot_set_user_confirmation() -> None:
+    with pytest.raises(ValidationError):
+        RequirementParsePayload.model_validate(
+            {
+                "vin_nominal_v": "24",
+                "confirmed_by_user": True,
+            }
+        )
