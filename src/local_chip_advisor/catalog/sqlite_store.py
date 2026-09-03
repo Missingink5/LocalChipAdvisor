@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Iterable
+from decimal import Decimal
 from pathlib import Path
 
 from local_chip_advisor.domain import EvidenceRef, PublicationStatus
@@ -26,6 +27,9 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
         CREATE TABLE IF NOT EXISTS products (
             product_id TEXT NOT NULL,
             knowledge_base_version TEXT NOT NULL,
+            vin_min_v REAL,
+            vin_max_v REAL,
+            iout_continuous_max_a REAL,
             payload_json TEXT NOT NULL,
             PRIMARY KEY (product_id, knowledge_base_version)
         );
@@ -111,13 +115,25 @@ def save_published_catalog(
             INSERT OR REPLACE INTO products (
                 product_id,
                 knowledge_base_version,
+                vin_min_v,
+                vin_max_v,
+                iout_continuous_max_a,
                 payload_json
             )
-            VALUES (?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 product.product_id,
                 product.knowledge_base_version,
+                float(product.vin_min_v)
+                if product.vin_min_v is not None
+                else None,
+                float(product.vin_max_v)
+                if product.vin_max_v is not None
+                else None,
+                float(product.iout_continuous_max_a)
+                if product.iout_continuous_max_a is not None
+                else None,
                 product_json,
             ),
         )
@@ -219,3 +235,49 @@ def load_published_catalog(
     )
 
     return product, evidence
+
+def find_published_candidates(
+    *,
+    database_path: str | Path,
+    knowledge_base_version: str,
+    operating_vin_min_v: Decimal,
+    operating_vin_max_v: Decimal,
+    continuous_iout_a: Decimal,
+) -> tuple[BuckProductRecord, ...]:
+    """Return published products that pass coarse SQL hard filtering."""
+
+    path = Path(database_path)
+
+    if not path.is_file():
+        raise FileNotFoundError(path)
+
+    with _connect(path) as connection:
+        _initialize_schema(connection)
+
+        rows = connection.execute(
+            """
+            SELECT payload_json
+            FROM products
+            WHERE knowledge_base_version = ?
+              AND vin_min_v IS NOT NULL
+              AND vin_max_v IS NOT NULL
+              AND iout_continuous_max_a IS NOT NULL
+              AND vin_min_v <= ?
+              AND vin_max_v >= ?
+              AND iout_continuous_max_a >= ?
+            ORDER BY product_id
+            """,
+            (
+                knowledge_base_version,
+                float(operating_vin_min_v),
+                float(operating_vin_max_v),
+                float(continuous_iout_a),
+            ),
+        ).fetchall()
+
+    return tuple(
+        BuckProductRecord.model_validate(
+            json.loads(row[0])
+        )
+        for row in rows
+    )

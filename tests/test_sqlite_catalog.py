@@ -3,9 +3,12 @@
 from decimal import Decimal
 from pathlib import Path
 
+import sqlite3
+
 import pytest
 
 from local_chip_advisor.catalog.sqlite_store import (
+    find_published_candidates,
     load_published_catalog,
     save_published_catalog,
 )
@@ -108,3 +111,78 @@ def test_published_product_rejects_missing_bound_evidence(
             product=product,
             evidence=(),
         )
+
+
+def test_published_catalog_materializes_hard_filter_columns(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    product = published_product()
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=reviewed_evidence(),
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        row = connection.execute(
+            """
+            SELECT
+                vin_min_v,
+                vin_max_v,
+                iout_continuous_max_a
+            FROM products
+            WHERE product_id = ?
+              AND knowledge_base_version = ?
+            """,
+            (
+                "MPS-MP4570",
+                "kb-test-v1",
+            ),
+        ).fetchone()
+
+    assert row == (4.5, 55.0, 3.0)
+
+
+def test_find_published_candidates_filters_vin_and_continuous_current(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    product = published_product()
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=reviewed_evidence(),
+    )
+
+    matching = find_published_candidates(
+        database_path=database_path,
+        knowledge_base_version="kb-test-v1",
+        operating_vin_min_v=Decimal("18"),
+        operating_vin_max_v=Decimal("30"),
+        continuous_iout_a=Decimal("2.5"),
+    )
+
+    too_high_vin = find_published_candidates(
+        database_path=database_path,
+        knowledge_base_version="kb-test-v1",
+        operating_vin_min_v=Decimal("18"),
+        operating_vin_max_v=Decimal("60"),
+        continuous_iout_a=Decimal("2.5"),
+    )
+
+    too_high_current = find_published_candidates(
+        database_path=database_path,
+        knowledge_base_version="kb-test-v1",
+        operating_vin_min_v=Decimal("18"),
+        operating_vin_max_v=Decimal("30"),
+        continuous_iout_a=Decimal("3.5"),
+    )
+
+    assert matching == (product,)
+    assert too_high_vin == ()
+    assert too_high_current == ()
