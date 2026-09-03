@@ -161,3 +161,44 @@ def test_catalog_screening_preserves_near_matches(
         item.product_id
         for item in result.needs_verification
     ) == ("MPS-MP4570",)
+
+
+def test_catalog_screening_keeps_product_and_evidence(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    evidence = reviewed_evidence()
+    product = prepare_published_product(
+        product=publishable_draft(),
+        evidence=evidence,
+    )
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    result = screen_published_catalog(
+        database_path=database_path,
+        knowledge_base_version="kb-dev-v1",
+        requirements=confirmed_requirements(),
+    )
+
+    assert len(result.needs_verification) == 1
+
+    candidate = result.needs_verification[0]
+
+    assert candidate.product == product
+    assert candidate.evaluation.product_id == product.product_id
+    assert candidate.evaluation.bucket is CandidateBucket.NEEDS_VERIFICATION
+
+    assert tuple(
+        item.evidence_id
+        for item in candidate.evidence
+    ) == (
+        "ev:iout",
+        "ev:vin",
+        "ev:vout",
+    )

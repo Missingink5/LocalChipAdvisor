@@ -118,12 +118,27 @@ def evaluate_candidate(
 
 
 @dataclass(frozen=True, slots=True)
+class ScreenedCandidate:
+    """One screened product with its evaluation and reviewed evidence."""
+
+    product: BuckProductRecord
+    evaluation: CandidateEvaluation
+    evidence: tuple[EvidenceRef, ...]
+
+    @property
+    def product_id(self) -> str:
+        """Compatibility shortcut for bucket consumers."""
+
+        return self.evaluation.product_id
+
+
+@dataclass(frozen=True, slots=True)
 class CatalogScreeningResult:
     """Deterministic three-bucket result for one published catalog."""
 
-    formal: tuple[CandidateEvaluation, ...]
-    near_match: tuple[CandidateEvaluation, ...]
-    needs_verification: tuple[CandidateEvaluation, ...]
+    formal: tuple[ScreenedCandidate, ...]
+    near_match: tuple[ScreenedCandidate, ...]
+    needs_verification: tuple[ScreenedCandidate, ...]
 
 
 def screen_published_catalog(
@@ -139,9 +154,9 @@ def screen_published_catalog(
         knowledge_base_version=knowledge_base_version,
     )
 
-    formal: list[CandidateEvaluation] = []
-    near_match: list[CandidateEvaluation] = []
-    needs_verification: list[CandidateEvaluation] = []
+    formal: list[ScreenedCandidate] = []
+    near_match: list[ScreenedCandidate] = []
+    needs_verification: list[ScreenedCandidate] = []
 
     for product in products:
         loaded_product, evidence = load_published_catalog(
@@ -156,12 +171,18 @@ def screen_published_catalog(
             requirements=requirements,
         )
 
+        screened = ScreenedCandidate(
+            product=loaded_product,
+            evaluation=evaluation,
+            evidence=tuple(evidence),
+        )
+
         if evaluation.bucket is CandidateBucket.FORMAL:
-            formal.append(evaluation)
+            formal.append(screened)
         elif evaluation.bucket is CandidateBucket.NEAR_MATCH:
-            near_match.append(evaluation)
+            near_match.append(screened)
         elif evaluation.bucket is CandidateBucket.NEEDS_VERIFICATION:
-            needs_verification.append(evaluation)
+            needs_verification.append(screened)
         else:
             raise ValueError(
                 f"unsupported candidate bucket: {evaluation.bucket}"
