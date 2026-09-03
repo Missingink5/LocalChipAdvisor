@@ -208,3 +208,38 @@ def test_candidate_issues_exposes_unknown_verification_reason(
     assert issue.actual is None
     assert "junction-temperature limits alone" in issue.reason
     assert issue.evidence == ()
+
+
+def test_recommendation_result_embeds_issues_for_verification_candidate(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    evidence = reviewed_evidence()
+
+    product = prepare_published_product(
+        product=publishable_draft(),
+        evidence=evidence,
+    )
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    result = recommend_from_published_catalog(
+        database_path=database_path,
+        knowledge_base_version="kb-dev-v1",
+        requirements=confirmed_requirements(),
+        policy=RankingPolicy(
+            criteria=(RankingCriterion.CURRENT_HEADROOM,),
+        ),
+    )
+
+    item = result.needs_verification[0]
+
+    assert item.candidate.product_id == "MPS-MP4570"
+    assert len(item.issues) == 1
+    assert item.issues[0].rule_id == "thermal.ambient"
+    assert item.issues[0].state.value == "UNKNOWN"

@@ -33,15 +33,6 @@ class FormalRecommendation:
 
 
 @dataclass(frozen=True, slots=True)
-class RecommendationResult:
-    """Stable output before any natural-language explanation layer."""
-
-    formal: tuple[FormalRecommendation, ...]
-    near_match: tuple[ScreenedCandidate, ...]
-    needs_verification: tuple[ScreenedCandidate, ...]
-
-
-@dataclass(frozen=True, slots=True)
 class CandidateIssue:
     """One failed or unresolved hard-constraint issue."""
 
@@ -51,6 +42,28 @@ class CandidateIssue:
     actual: str | None
     reason: str
     evidence: tuple[EvidenceRef, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class FlaggedCandidate:
+    """Non-formal candidate with structured failure or verification issues."""
+
+    candidate: ScreenedCandidate
+    issues: tuple[CandidateIssue, ...]
+
+    @property
+    def product_id(self) -> str:
+        """Compatibility access to the underlying candidate identifier."""
+        return self.candidate.product_id
+
+
+@dataclass(frozen=True, slots=True)
+class RecommendationResult:
+    """Stable output before any natural-language explanation layer."""
+
+    formal: tuple[FormalRecommendation, ...]
+    near_match: tuple[FlaggedCandidate, ...]
+    needs_verification: tuple[FlaggedCandidate, ...]
 
 
 def _key_evidence(
@@ -117,10 +130,26 @@ def build_recommendation_result(
         )
     )
 
+    near_match = tuple(
+        FlaggedCandidate(
+            candidate=item,
+            issues=candidate_issues(item),
+        )
+        for item in screening_result.near_match
+    )
+
+    needs_verification = tuple(
+        FlaggedCandidate(
+            candidate=item,
+            issues=candidate_issues(item),
+        )
+        for item in screening_result.needs_verification
+    )
+
     return RecommendationResult(
         formal=formal,
-        near_match=screening_result.near_match,
-        needs_verification=screening_result.needs_verification,
+        near_match=near_match,
+        needs_verification=needs_verification,
     )
 
 
@@ -149,9 +178,12 @@ def recommend_from_published_catalog(
 
 
 def candidate_issues(
-    candidate: ScreenedCandidate,
+    candidate: ScreenedCandidate | FlaggedCandidate,
 ) -> tuple[CandidateIssue, ...]:
     """Extract FAIL and UNKNOWN checks with program-bound evidence."""
+
+    if isinstance(candidate, FlaggedCandidate):
+        return candidate.issues
 
     evidence_by_id = {
         item.evidence_id: item
