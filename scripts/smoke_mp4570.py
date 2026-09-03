@@ -1,4 +1,4 @@
-﻿"""Real MP4570 evidence-bound smoke test using the local official Datasheet."""
+﻿"""Real MP4570 evidence-bound smoke test loaded from the local draft catalog."""
 
 from __future__ import annotations
 
@@ -6,14 +6,8 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-from local_chip_advisor.domain import (
-    EvidenceRef,
-    LimitKind,
-    PublicationStatus,
-    classify_candidate,
-    validate_evidence_bindings,
-)
-from local_chip_advisor.domain.product import BuckProductRecord
+from local_chip_advisor.catalog.io import load_draft_catalog
+from local_chip_advisor.domain import classify_candidate, validate_evidence_bindings
 from local_chip_advisor.domain.product_rules import (
     check_continuous_output_current,
     check_input_voltage,
@@ -24,129 +18,39 @@ from local_chip_advisor.ingestion import parse_pdf
 
 ROOT = Path(__file__).resolve().parents[1]
 
-pdf_path = (
-    ROOT
-    / "data"
-    / "raw"
-    / "mps"
-    / "MP4570"
-    / "MP4570_Datasheet.pdf"
-)
+raw_dir = ROOT / "data" / "raw" / "mps" / "MP4570"
+draft_dir = ROOT / "data" / "catalog" / "drafts" / "MP4570"
 
-manifest_path = pdf_path.parent / "source.json"
+pdf_path = raw_dir / "MP4570_Datasheet.pdf"
+manifest_path = raw_dir / "source.json"
 
+
+# Load persisted structured product data and evidence.
+product, evidence_items = load_draft_catalog(draft_dir)
+evidence = {
+    item.evidence_id: item
+    for item in evidence_items
+}
+
+
+# Re-check that the catalog still points to the exact local official PDF.
 manifest = json.loads(
     manifest_path.read_text(encoding="utf-8-sig")
 )
-
 parsed = parse_pdf(pdf_path)
 
 assert parsed.page_count == 22
 assert parsed.sha256.upper() == manifest["sha256"].upper()
 
-page1 = " ".join(parsed.pages[0].text.split())
-page4 = " ".join(parsed.pages[3].text.split())
-
-assert "3A continuous output current" in page1
-assert "Supply Voltage VIN" in page4
-assert "4.5V to 55V" in page4
-assert "Output Voltage VOUT" in page4
-assert "1V to 0.9·VIN" in page4
+for item in evidence_items:
+    assert item.product_id == product.product_id
+    assert item.knowledge_base_version == product.knowledge_base_version
+    assert item.sha256 == parsed.sha256
+    assert 1 <= item.page <= parsed.page_count
 
 
-kb_version = "kb-dev-v1"
-document_id = "mps-mp4570-datasheet-rev1.01"
-
-
-evidence = {
-    "ev:mp4570:vin-range": EvidenceRef(
-        evidence_id="ev:mp4570:vin-range",
-        product_id="MPS-MP4570",
-        field_name="vin.range",
-        knowledge_base_version=kb_version,
-        document_id=document_id,
-        sha256=parsed.sha256,
-        document_title="MP4570 Datasheet",
-        document_version="Rev. 1.01",
-        page=4,
-        section="Recommended Operating Conditions",
-        excerpt="Supply Voltage VIN: 4.5V to 55V",
-        limit_kind=LimitKind.RECOMMENDED_RANGE,
-        source_url=manifest["source_url"],
-        reviewed=True,
-    ),
-    "ev:mp4570:vout-range": EvidenceRef(
-        evidence_id="ev:mp4570:vout-range",
-        product_id="MPS-MP4570",
-        field_name="vout.range",
-        knowledge_base_version=kb_version,
-        document_id=document_id,
-        sha256=parsed.sha256,
-        document_title="MP4570 Datasheet",
-        document_version="Rev. 1.01",
-        page=4,
-        section="Recommended Operating Conditions",
-        excerpt="Output Voltage VOUT: 1V to 0.9·VIN",
-        limit_kind=LimitKind.RECOMMENDED_RANGE,
-        source_url=manifest["source_url"],
-        reviewed=True,
-    ),
-    "ev:mp4570:iout": EvidenceRef(
-        evidence_id="ev:mp4570:iout",
-        product_id="MPS-MP4570",
-        field_name="iout.continuous",
-        knowledge_base_version=kb_version,
-        document_id=document_id,
-        sha256=parsed.sha256,
-        document_title="MP4570 Datasheet",
-        document_version="Rev. 1.01",
-        page=1,
-        section="DESCRIPTION",
-        excerpt="It can provide 3A continuous output current.",
-        limit_kind=LimitKind.RATED_MAX,
-        source_url=manifest["source_url"],
-        reviewed=True,
-    ),
-}
-
-
-product = BuckProductRecord(
-    product_id="MPS-MP4570",
-    manufacturer="Monolithic Power Systems (MPS)",
-    base_part_number="MP4570",
-    orderable_part_numbers=("MP4570GF-Z",),
-    knowledge_base_version=kb_version,
-
-    # Still draft: peak current, surge, and thermal screening
-    # are not complete yet.
-    publication_status=PublicationStatus.DRAFT,
-
-    vin_min_v=Decimal("4.5"),
-    vin_max_v=Decimal("55"),
-
-    vout_min_v=Decimal("1"),
-    vout_max_v=None,
-    vout_max_vin_ratio=Decimal("0.9"),
-
-    iout_continuous_max_a=Decimal("3"),
-
-    vin_absolute_max_v=Decimal("60"),
-
-    junction_temp_min_c=Decimal("-40"),
-    junction_temp_max_c=Decimal("125"),
-
-    package="TSSOP-20 EP",
-
-    evidence_ids_by_field=(
-        ("vin_min_v", ("ev:mp4570:vin-range",)),
-        ("vin_max_v", ("ev:mp4570:vin-range",)),
-        ("vout_min_v", ("ev:mp4570:vout-range",)),
-        ("vout_max_vin_ratio", ("ev:mp4570:vout-range",)),
-        ("iout_continuous_max_a", ("ev:mp4570:iout",)),
-    ),
-)
-
-
+# Example engineering requirement for the smoke test:
+# 18–30V input, 5V output, 2.5A continuous load.
 checks = (
     check_input_voltage(
         product=product,
@@ -174,12 +78,13 @@ evaluation = classify_candidate(
 validate_evidence_bindings(
     evaluation,
     evidence,
-    knowledge_base_version=kb_version,
+    knowledge_base_version=product.knowledge_base_version,
 )
 
 
 print("PDF SHA256:", parsed.sha256)
 print("Product:", product.base_part_number)
+print("Catalog evidence:", len(evidence_items))
 
 for check in checks:
     print(
