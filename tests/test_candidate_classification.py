@@ -30,6 +30,7 @@ def test_published_candidate_with_all_passes_is_formal() -> None:
         product_id="TEST-MPS-001",
         publication_status=PublicationStatus.PUBLISHED,
         checks=(check(CheckState.PASS), check(CheckState.PASS, rule_id="iout.continuous")),
+        required_rule_ids=("vin.range", "iout.continuous"),
     )
 
     assert result.bucket is CandidateBucket.FORMAL
@@ -85,3 +86,39 @@ def test_empty_check_set_is_rejected() -> None:
             publication_status=PublicationStatus.PUBLISHED,
             checks=(),
         )
+
+
+def test_missing_required_hard_check_cannot_be_formal() -> None:
+    result = classify_candidate(
+        product_id="TEST-MPS-REQUIRED",
+        publication_status=PublicationStatus.PUBLISHED,
+        checks=(
+            check(CheckState.PASS, rule_id="vin.range"),
+            check(CheckState.PASS, rule_id="vout.range"),
+            check(CheckState.PASS, rule_id="iout.continuous"),
+        ),
+        required_rule_ids=(
+            "vin.range",
+            "vout.range",
+            "iout.continuous",
+            "iout.peak",
+            "surge.input",
+            "thermal.ambient",
+        ),
+    )
+
+    assert result.bucket is CandidateBucket.NEEDS_VERIFICATION
+
+
+def test_default_classification_does_not_allow_partial_checks_to_be_formal() -> None:
+    result = classify_candidate(
+        product_id="TEST-MPS-DEFAULT-SAFE",
+        publication_status=PublicationStatus.PUBLISHED,
+        checks=(
+            check(CheckState.PASS, rule_id="vin.range"),
+            check(CheckState.PASS, rule_id="vout.range"),
+            check(CheckState.PASS, rule_id="iout.continuous"),
+        ),
+    )
+
+    assert result.bucket is CandidateBucket.NEEDS_VERIFICATION

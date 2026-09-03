@@ -27,11 +27,22 @@ DECISIVE_LIMIT_KINDS = {
 }
 
 
+DEFAULT_REQUIRED_RULE_IDS = (
+    "vin.range",
+    "vout.range",
+    "iout.continuous",
+    "iout.peak",
+    "surge.input",
+    "thermal.ambient",
+)
+
+
 def classify_candidate(
     *,
     product_id: str,
     publication_status: PublicationStatus,
     checks: Iterable[CheckResult],
+    required_rule_ids: Iterable[str] = DEFAULT_REQUIRED_RULE_IDS,
 ) -> CandidateEvaluation:
     """Classify a candidate without using model-generated judgment.
 
@@ -44,9 +55,18 @@ def classify_candidate(
         raise ValueError("at least one hard-constraint check is required")
 
     states = {check.state for check in materialized_checks}
+
+    required = frozenset(required_rule_ids)
+    present_rule_ids = {check.rule_id for check in materialized_checks}
+    missing_required_rule_ids = required - present_rule_ids
+
     if CheckState.FAIL in states:
         bucket = CandidateBucket.NEAR_MATCH
-    elif publication_status is not PublicationStatus.PUBLISHED or CheckState.UNKNOWN in states:
+    elif (
+        publication_status is not PublicationStatus.PUBLISHED
+        or CheckState.UNKNOWN in states
+        or missing_required_rule_ids
+    ):
         bucket = CandidateBucket.NEEDS_VERIFICATION
     else:
         bucket = CandidateBucket.FORMAL
