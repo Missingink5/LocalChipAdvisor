@@ -315,3 +315,35 @@ def find_published_candidates(
         )
         for row in rows
     )
+
+def list_published_products(
+    *,
+    database_path: str | Path,
+    knowledge_base_version: str,
+) -> tuple[BuckProductRecord, ...]:
+    """Return all published products for one knowledge-base version."""
+
+    path = Path(database_path)
+
+    if not path.is_file():
+        raise FileNotFoundError(path)
+
+    with _connect(path) as connection:
+        _initialize_schema(connection)
+
+        rows = connection.execute(
+            """
+            SELECT payload_json
+            FROM products
+            WHERE knowledge_base_version = ?
+            ORDER BY product_id
+            """,
+            (knowledge_base_version,),
+        ).fetchall()
+
+    return tuple(
+        BuckProductRecord.model_validate(
+            json.loads(row[0])
+        )
+        for row in rows
+    )

@@ -10,6 +10,7 @@ import pytest
 from local_chip_advisor.catalog.sqlite_store import (
     find_published_candidates,
     load_published_catalog,
+    list_published_products,
     save_published_catalog,
 )
 from local_chip_advisor.domain import EvidenceRef, LimitKind, PublicationStatus
@@ -224,3 +225,23 @@ def test_find_published_candidates_applies_dynamic_vout_limit(
 
     assert matching == (product,)
     assert too_high_vout_at_low_vin == ()
+
+def test_list_published_products_returns_all_products_for_kb_version(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    product = published_product()
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=reviewed_evidence(),
+    )
+
+    products = list_published_products(
+        database_path=database_path,
+        knowledge_base_version="kb-test-v1",
+    )
+
+    assert products == (product,)
