@@ -1,6 +1,7 @@
-﻿"""Contract tests for structured Buck product master data."""
+"""Contract tests for structured Buck product master data."""
 
 from datetime import date
+from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
@@ -80,3 +81,29 @@ def test_duplicate_field_evidence_binding_is_rejected() -> None:
                 ("vin_min_v", ("ev:2",)),
             )
         )
+
+
+def test_output_maximum_can_be_relative_to_input_voltage() -> None:
+    product = valid_product(
+        vout_min_v="1",
+        vout_max_v=None,
+        vout_max_vin_ratio="0.9",
+    )
+
+    assert product.vout_min_v == 1
+    assert product.vout_max_v is None
+    assert product.vout_max_vin_ratio == Decimal("0.9")
+
+
+def test_output_to_input_ratio_cannot_exceed_one_for_buck() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        valid_product(
+            vout_max_v=None,
+            vout_max_vin_ratio="1.1",
+        )
+
+    assert any(
+        error["loc"] == ("vout_max_vin_ratio",)
+        and error["type"] == "less_than_equal"
+        for error in exc_info.value.errors()
+    )

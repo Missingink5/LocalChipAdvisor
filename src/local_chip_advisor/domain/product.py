@@ -1,4 +1,4 @@
-﻿"""Structured product master data for Buck converter selection."""
+"""Structured product master data for Buck converter selection."""
 
 from __future__ import annotations
 
@@ -34,6 +34,11 @@ class BuckProductRecord(FrozenModel):
     vin_max_v: Decimal | None = Field(default=None, gt=0)
     vout_min_v: Decimal | None = Field(default=None, gt=0)
     vout_max_v: Decimal | None = Field(default=None, gt=0)
+    vout_max_vin_ratio: Decimal | None = Field(
+        default=None,
+        gt=0,
+        le=1,
+    )
     iout_continuous_max_a: Decimal | None = Field(default=None, gt=0)
     iout_peak_max_a: Decimal | None = Field(default=None, gt=0)
 

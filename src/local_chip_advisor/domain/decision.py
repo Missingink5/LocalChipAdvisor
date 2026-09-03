@@ -23,6 +23,7 @@ DECISIVE_LIMIT_KINDS = {
     LimitKind.RECOMMENDED_RANGE,
     LimitKind.GUARANTEED_MIN,
     LimitKind.GUARANTEED_MAX,
+    LimitKind.RATED_MAX,
 }
 
 

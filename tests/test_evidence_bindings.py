@@ -95,3 +95,32 @@ def test_unknown_evidence_id_is_rejected() -> None:
             {},
             knowledge_base_version="kb-test-v1",
         )
+
+
+def test_rated_max_evidence_can_back_decisive_output_current() -> None:
+    evaluation = classify_candidate(
+        product_id="TEST-MPS-001",
+        publication_status=PublicationStatus.PUBLISHED,
+        checks=(
+            CheckResult(
+                rule_id="iout.continuous",
+                field_name="iout.continuous",
+                state=CheckState.PASS,
+                requirement="continuous output current >= 3A",
+                actual="rated continuous output current = 3A",
+                reason="datasheet explicitly rates the device for 3A continuous output",
+                evidence_ids=("ev:test:1",),
+            ),
+        ),
+    )
+
+    validate_evidence_bindings(
+        evaluation,
+        {
+            "ev:test:1": evidence(
+                field_name="iout.continuous",
+                limit_kind=LimitKind.RATED_MAX,
+            )
+        },
+        knowledge_base_version="kb-test-v1",
+    )
