@@ -368,3 +368,99 @@ def check_input_surge(
         actual=None,
         reason="user has not characterized the input surge condition",
     )
+
+def check_peak_output_current(
+    *,
+    product: BuckProductRecord,
+    requested_iout_peak_a: Decimal,
+    requested_peak_duration_ms: Decimal,
+) -> CheckResult:
+    """Check peak load against an explicit current-and-duration product rating."""
+
+    if requested_iout_peak_a <= 0:
+        raise ValueError("requested_iout_peak_a must be positive")
+
+    if requested_peak_duration_ms <= 0:
+        raise ValueError("requested_peak_duration_ms must be positive")
+
+    peak_max = product.iout_peak_max_a
+    duration_max = product.iout_peak_duration_max_ms
+
+    requirement = (
+        f"peak IOUT={requested_iout_peak_a}A "
+        f"for {requested_peak_duration_ms}ms"
+    )
+
+    if peak_max is None or duration_max is None:
+        return CheckResult(
+            rule_id="iout.peak",
+            field_name="iout.peak",
+            state=CheckState.UNKNOWN,
+            requirement=requirement,
+            actual=None,
+            reason=(
+                "product peak output-current capability is incomplete; "
+                "both peak current and allowed duration are required"
+            ),
+        )
+
+    actual = (
+        f"{peak_max}A peak rated maximum "
+        f"for up to {duration_max}ms"
+    )
+
+    missing_evidence_fields = tuple(
+        field_name
+        for field_name in (
+            "iout_peak_max_a",
+            "iout_peak_duration_max_ms",
+        )
+        if not product.evidence_ids_for(field_name)
+    )
+
+    if missing_evidence_fields:
+        return CheckResult(
+            rule_id="iout.peak",
+            field_name="iout.peak",
+            state=CheckState.UNKNOWN,
+            requirement=requirement,
+            actual=actual,
+            reason=(
+                "decisive peak output-current evidence is missing for: "
+                + ", ".join(missing_evidence_fields)
+            ),
+        )
+
+    evidence_ids = _unique_evidence_ids(
+        product,
+        "iout_peak_max_a",
+        "iout_peak_duration_max_ms",
+    )
+
+    if (
+        requested_iout_peak_a > peak_max
+        or requested_peak_duration_ms > duration_max
+    ):
+        state = CheckState.FAIL
+        reason = (
+            f"requested peak {requested_iout_peak_a}A for "
+            f"{requested_peak_duration_ms}ms exceeds the qualified "
+            f"limit of {peak_max}A for up to {duration_max}ms"
+        )
+    else:
+        state = CheckState.PASS
+        reason = (
+            f"requested peak {requested_iout_peak_a}A for "
+            f"{requested_peak_duration_ms}ms is within the qualified "
+            f"limit of {peak_max}A for up to {duration_max}ms"
+        )
+
+    return CheckResult(
+        rule_id="iout.peak",
+        field_name="iout.peak",
+        state=state,
+        requirement=requirement,
+        actual=actual,
+        reason=reason,
+        evidence_ids=evidence_ids,
+    )

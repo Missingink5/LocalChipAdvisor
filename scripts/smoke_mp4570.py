@@ -17,6 +17,7 @@ from local_chip_advisor.domain.product_rules import (
     check_input_surge,
     check_input_voltage,
     check_output_voltage,
+    check_peak_output_current,
 )
 from local_chip_advisor.ingestion import parse_pdf
 
@@ -76,6 +77,11 @@ checks = (
         surge_knowledge=SurgeKnowledge.NONE_EXPECTED,
         surge_voltage_v=None,
         surge_duration_ms=None,
+    ),
+    check_peak_output_current(
+        product=product,
+        requested_iout_peak_a=Decimal("3"),
+        requested_peak_duration_ms=Decimal("10"),
     ),
 )
 

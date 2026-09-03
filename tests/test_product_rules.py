@@ -3,7 +3,7 @@
 from decimal import Decimal
 
 from local_chip_advisor.domain import CheckState, SurgeKnowledge
-from local_chip_advisor.domain.product_rules import check_continuous_output_current, check_input_surge, check_input_voltage, check_output_voltage
+from local_chip_advisor.domain.product_rules import check_continuous_output_current, check_input_surge, check_input_voltage, check_output_voltage, check_peak_output_current
 from test_product_record import valid_product
 
 
@@ -220,5 +220,81 @@ def test_input_surge_is_unknown_when_real_surge_has_no_transient_rating() -> Non
     )
 
     assert result.rule_id == "surge.input"
+    assert result.state is CheckState.UNKNOWN
+    assert result.evidence_ids == ()
+
+def test_peak_output_current_passes_with_explicit_current_and_duration_rating() -> None:
+    product = valid_product(
+        iout_peak_max_a="4",
+        iout_peak_duration_max_ms="10",
+        evidence_ids_by_field=(
+            ("iout_peak_max_a", ("ev:peak",)),
+            ("iout_peak_duration_max_ms", ("ev:peak",)),
+        ),
+    )
+
+    result = check_peak_output_current(
+        product=product,
+        requested_iout_peak_a=Decimal("3.5"),
+        requested_peak_duration_ms=Decimal("5"),
+    )
+
+    assert result.rule_id == "iout.peak"
+    assert result.state is CheckState.PASS
+    assert result.evidence_ids == ("ev:peak",)
+
+
+def test_peak_output_current_fails_when_current_exceeds_rating() -> None:
+    product = valid_product(
+        iout_peak_max_a="4",
+        iout_peak_duration_max_ms="10",
+        evidence_ids_by_field=(
+            ("iout_peak_max_a", ("ev:peak",)),
+            ("iout_peak_duration_max_ms", ("ev:peak",)),
+        ),
+    )
+
+    result = check_peak_output_current(
+        product=product,
+        requested_iout_peak_a=Decimal("4.5"),
+        requested_peak_duration_ms=Decimal("5"),
+    )
+
+    assert result.state is CheckState.FAIL
+
+
+def test_peak_output_current_fails_when_duration_exceeds_rating() -> None:
+    product = valid_product(
+        iout_peak_max_a="4",
+        iout_peak_duration_max_ms="10",
+        evidence_ids_by_field=(
+            ("iout_peak_max_a", ("ev:peak",)),
+            ("iout_peak_duration_max_ms", ("ev:peak",)),
+        ),
+    )
+
+    result = check_peak_output_current(
+        product=product,
+        requested_iout_peak_a=Decimal("3.5"),
+        requested_peak_duration_ms=Decimal("20"),
+    )
+
+    assert result.state is CheckState.FAIL
+
+
+def test_peak_output_current_is_unknown_without_duration_rating() -> None:
+    product = valid_product(
+        iout_peak_max_a="4",
+        evidence_ids_by_field=(
+            ("iout_peak_max_a", ("ev:peak",)),
+        ),
+    )
+
+    result = check_peak_output_current(
+        product=product,
+        requested_iout_peak_a=Decimal("3.5"),
+        requested_peak_duration_ms=Decimal("5"),
+    )
+
     assert result.state is CheckState.UNKNOWN
     assert result.evidence_ids == ()

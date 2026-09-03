@@ -41,6 +41,7 @@ class BuckProductRecord(FrozenModel):
     )
     iout_continuous_max_a: Decimal | None = Field(default=None, gt=0)
     iout_peak_max_a: Decimal | None = Field(default=None, gt=0)
+    iout_peak_duration_max_ms: Decimal | None = Field(default=None, gt=0)
 
     # Absolute maximum ratings.
     # These are stored for warning/risk analysis, not normal hard qualification.
