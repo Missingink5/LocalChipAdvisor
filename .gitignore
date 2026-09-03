@@ -1,0 +1,31 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+
+# Local data and model artifacts
+data/raw/**
+data/processed/**
+data/catalog/drafts/**
+indexes/**
+models/**
+logs/**
+backups/**
+
+# Keep directory placeholders
+!**/.gitkeep
+
+# Large local artifacts - never versioned
+models/
+runtime/
+
+# Large local artifacts - never versioned
+models/
+runtime/
+
+# Installers & Python build artifacts
+installers/
+*.egg-info/

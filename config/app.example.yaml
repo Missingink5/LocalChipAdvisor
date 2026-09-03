@@ -1,0 +1,26 @@
+app:
+  host: "127.0.0.1"
+  api_port: 8765
+  ui_port: 8501
+  persist_raw_conversations: false
+
+ollama:
+  base_url: "http://127.0.0.1:11434"
+  chat_model: "qwen3.5:9b-q4_K_M"
+  embedding_model: "qwen3-embedding:0.6b"
+  context_tokens: 4096
+  max_loaded_models: 1
+  num_parallel: 1
+
+storage:
+  raw_documents: "data/raw"
+  processed_documents: "data/processed"
+  draft_catalog: "data/catalog/drafts"
+  published_catalog: "data/catalog/published"
+  vector_index: "indexes/chroma"
+  logs: "logs"
+
+security:
+  allow_cloud_api: false
+  treat_documents_as_untrusted: true
+  require_reviewed_records_for_formal_recommendation: true
