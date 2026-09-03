@@ -8,6 +8,7 @@ from local_chip_advisor.domain import (
 )
 from local_chip_advisor.requirements import (
     build_requirement_review,
+    confirm_requirement_card,
 )
 
 
@@ -61,3 +62,47 @@ def test_requirement_review_is_ready_when_minimum_fields_are_complete() -> None:
     assert review.missing_fields == ()
     assert review.ready_for_confirmation is True
     assert review.card.confirmed_by_user is False
+
+
+def test_confirm_requirement_card_marks_complete_card_confirmed() -> None:
+    card = RequirementCard(
+        raw_request="confirmed complete requirement",
+        vin_min_v=Decimal("18"),
+        vin_nominal_v=Decimal("24"),
+        vin_max_v=Decimal("30"),
+        surge_knowledge=SurgeKnowledge.NONE_EXPECTED,
+        vout_target_v=Decimal("5"),
+        vout_tolerance_percent=Decimal("2"),
+        iout_continuous_a=Decimal("2.5"),
+        iout_peak_a=Decimal("3"),
+        peak_duration_ms=Decimal("10"),
+        ambient_max_c=Decimal("70"),
+        thermal_conditions="natural convection",
+        confirmed_by_user=False,
+    )
+
+    confirmed = confirm_requirement_card(card)
+
+    assert confirmed is not card
+    assert confirmed.confirmed_by_user is True
+    assert confirmed.missing_minimum_fields() == ()
+
+
+def test_confirm_requirement_card_rejects_incomplete_card() -> None:
+    card = RequirementCard(
+        raw_request="24V to 5V",
+        vin_nominal_v=Decimal("24"),
+        vout_target_v=Decimal("5"),
+        confirmed_by_user=False,
+    )
+
+    try:
+        confirm_requirement_card(card)
+    except ValueError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("expected incomplete requirement confirmation to fail")
+
+    assert "cannot confirm incomplete requirement card" in message
+    assert "vin_min_v" in message
+    assert "vin_max_v" in message

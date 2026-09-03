@@ -31,3 +31,25 @@ def build_requirement_review(
             and not card.confirmed_by_user
         ),
     )
+
+
+def confirm_requirement_card(
+    card: RequirementCard,
+) -> RequirementCard:
+    """Confirm a complete requirement card for deterministic screening."""
+
+    missing_fields = card.missing_minimum_fields()
+
+    if missing_fields:
+        missing = ", ".join(missing_fields)
+        raise ValueError(
+            "cannot confirm incomplete requirement card: "
+            f"{missing}"
+        )
+
+    return RequirementCard.model_validate(
+        {
+            **card.model_dump(),
+            "confirmed_by_user": True,
+        }
+    )
