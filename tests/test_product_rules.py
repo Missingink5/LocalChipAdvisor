@@ -352,3 +352,24 @@ def test_ambient_thermal_is_unknown_when_only_junction_rating_exists() -> None:
     assert result.rule_id == "thermal.ambient"
     assert result.state is CheckState.UNKNOWN
     assert result.evidence_ids == ()
+
+def test_peak_output_current_uses_continuous_rating_when_it_is_sufficient() -> None:
+    product = valid_product(
+        iout_continuous_max_a="3",
+        iout_peak_max_a=None,
+        iout_peak_duration_max_ms=None,
+        evidence_ids_by_field=(
+            ("iout_continuous_max_a", ("ev:continuous",)),
+        ),
+    )
+
+    result = check_peak_output_current(
+        product=product,
+        requested_iout_peak_a=Decimal("3"),
+        requested_peak_duration_ms=Decimal("10"),
+    )
+
+    assert result.rule_id == "iout.peak"
+    assert result.field_name == "iout.continuous"
+    assert result.state is CheckState.PASS
+    assert result.evidence_ids == ("ev:continuous",)

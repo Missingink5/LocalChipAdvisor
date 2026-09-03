@@ -391,6 +391,45 @@ def check_peak_output_current(
         f"for {requested_peak_duration_ms}ms"
     )
 
+    continuous_max = product.iout_continuous_max_a
+
+    if (
+        continuous_max is not None
+        and requested_iout_peak_a <= continuous_max
+    ):
+        evidence_ids = product.evidence_ids_for(
+            "iout_continuous_max_a"
+        )
+
+        if not evidence_ids:
+            return CheckResult(
+                rule_id="iout.peak",
+                field_name="iout.continuous",
+                state=CheckState.UNKNOWN,
+                requirement=requirement,
+                actual=(
+                    f"{continuous_max}A continuous rated maximum"
+                ),
+                reason=(
+                    "continuous rating would cover the requested peak, "
+                    "but decisive continuous-current evidence is missing"
+                ),
+            )
+
+        return CheckResult(
+            rule_id="iout.peak",
+            field_name="iout.continuous",
+            state=CheckState.PASS,
+            requirement=requirement,
+            actual=f"{continuous_max}A continuous rated maximum",
+            reason=(
+                f"the product is rated to provide {continuous_max}A "
+                "continuously, which is stronger than the requested "
+                f"{requested_iout_peak_a}A finite-duration peak"
+            ),
+            evidence_ids=evidence_ids,
+        )
+
     if peak_max is None or duration_max is None:
         return CheckResult(
             rule_id="iout.peak",
