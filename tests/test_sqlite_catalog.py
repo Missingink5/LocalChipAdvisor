@@ -165,6 +165,7 @@ def test_find_published_candidates_filters_vin_and_continuous_current(
         operating_vin_min_v=Decimal("18"),
         operating_vin_max_v=Decimal("30"),
         continuous_iout_a=Decimal("2.5"),
+        requested_vout_v=Decimal("5"),
     )
 
     too_high_vin = find_published_candidates(
@@ -173,6 +174,7 @@ def test_find_published_candidates_filters_vin_and_continuous_current(
         operating_vin_min_v=Decimal("18"),
         operating_vin_max_v=Decimal("60"),
         continuous_iout_a=Decimal("2.5"),
+        requested_vout_v=Decimal("5"),
     )
 
     too_high_current = find_published_candidates(
@@ -181,8 +183,44 @@ def test_find_published_candidates_filters_vin_and_continuous_current(
         operating_vin_min_v=Decimal("18"),
         operating_vin_max_v=Decimal("30"),
         continuous_iout_a=Decimal("3.5"),
+        requested_vout_v=Decimal("5"),
     )
 
     assert matching == (product,)
     assert too_high_vin == ()
     assert too_high_current == ()
+
+
+def test_find_published_candidates_applies_dynamic_vout_limit(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    product = published_product()
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=reviewed_evidence(),
+    )
+
+    matching = find_published_candidates(
+        database_path=database_path,
+        knowledge_base_version="kb-test-v1",
+        operating_vin_min_v=Decimal("18"),
+        operating_vin_max_v=Decimal("30"),
+        continuous_iout_a=Decimal("2.5"),
+        requested_vout_v=Decimal("5"),
+    )
+
+    too_high_vout_at_low_vin = find_published_candidates(
+        database_path=database_path,
+        knowledge_base_version="kb-test-v1",
+        operating_vin_min_v=Decimal("4.5"),
+        operating_vin_max_v=Decimal("30"),
+        continuous_iout_a=Decimal("2.5"),
+        requested_vout_v=Decimal("5"),
+    )
+
+    assert matching == (product,)
+    assert too_high_vout_at_low_vin == ()

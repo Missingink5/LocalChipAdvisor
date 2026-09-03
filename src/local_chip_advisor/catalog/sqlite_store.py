@@ -29,6 +29,9 @@ def _initialize_schema(connection: sqlite3.Connection) -> None:
             knowledge_base_version TEXT NOT NULL,
             vin_min_v REAL,
             vin_max_v REAL,
+            vout_min_v REAL,
+            vout_max_v REAL,
+            vout_max_vin_ratio REAL,
             iout_continuous_max_a REAL,
             payload_json TEXT NOT NULL,
             PRIMARY KEY (product_id, knowledge_base_version)
@@ -117,10 +120,13 @@ def save_published_catalog(
                 knowledge_base_version,
                 vin_min_v,
                 vin_max_v,
+                vout_min_v,
+                vout_max_v,
+                vout_max_vin_ratio,
                 iout_continuous_max_a,
                 payload_json
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 product.product_id,
@@ -130,6 +136,15 @@ def save_published_catalog(
                 else None,
                 float(product.vin_max_v)
                 if product.vin_max_v is not None
+                else None,
+                float(product.vout_min_v)
+                if product.vout_min_v is not None
+                else None,
+                float(product.vout_max_v)
+                if product.vout_max_v is not None
+                else None,
+                float(product.vout_max_vin_ratio)
+                if product.vout_max_vin_ratio is not None
                 else None,
                 float(product.iout_continuous_max_a)
                 if product.iout_continuous_max_a is not None
@@ -243,6 +258,7 @@ def find_published_candidates(
     operating_vin_min_v: Decimal,
     operating_vin_max_v: Decimal,
     continuous_iout_a: Decimal,
+    requested_vout_v: Decimal,
 ) -> tuple[BuckProductRecord, ...]:
     """Return published products that pass coarse SQL hard filtering."""
 
@@ -261,10 +277,24 @@ def find_published_candidates(
             WHERE knowledge_base_version = ?
               AND vin_min_v IS NOT NULL
               AND vin_max_v IS NOT NULL
+              AND vout_min_v IS NOT NULL
               AND iout_continuous_max_a IS NOT NULL
+              AND (
+                    vout_max_v IS NOT NULL
+                    OR vout_max_vin_ratio IS NOT NULL
+                  )
               AND vin_min_v <= ?
               AND vin_max_v >= ?
               AND iout_continuous_max_a >= ?
+              AND vout_min_v <= ?
+              AND (
+                    vout_max_v IS NULL
+                    OR vout_max_v >= ?
+                  )
+              AND (
+                    vout_max_vin_ratio IS NULL
+                    OR vout_max_vin_ratio * ? >= ?
+                  )
             ORDER BY product_id
             """,
             (
@@ -272,6 +302,10 @@ def find_published_candidates(
                 float(operating_vin_min_v),
                 float(operating_vin_max_v),
                 float(continuous_iout_a),
+                float(requested_vout_v),
+                float(requested_vout_v),
+                float(operating_vin_min_v),
+                float(requested_vout_v),
             ),
         ).fetchall()
 
