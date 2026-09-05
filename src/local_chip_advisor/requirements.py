@@ -85,7 +85,15 @@ class RequirementParsePayload(BaseModel):
     vin_nominal_v: Decimal | None = Field(default=None, gt=0)
     vin_max_v: Decimal | None = Field(default=None, gt=0)
 
-    surge_knowledge: SurgeKnowledge | None = None
+    surge_knowledge: SurgeKnowledge | None = Field(
+        default=None,
+        description=(
+            "Input surge status: PRESENT when surge or transient is explicitly present; "
+            "NONE_EXPECTED when the user explicitly says no surge is expected; "
+            "UNKNOWN when the user explicitly says surge status is unknown; "
+            "null only when the user provides no surge information."
+        ),
+    )
     surge_voltage_v: Decimal | None = Field(default=None, gt=0)
     surge_duration_ms: Decimal | None = Field(default=None, gt=0)
 
@@ -94,10 +102,27 @@ class RequirementParsePayload(BaseModel):
 
     iout_continuous_a: Decimal | None = Field(default=None, gt=0)
     iout_peak_a: Decimal | None = Field(default=None, gt=0)
-    peak_duration_ms: Decimal | None = Field(default=None, gt=0)
+    peak_duration_ms: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Duration in milliseconds of the explicitly stated peak output current."
+        ),
+    )
 
-    ambient_max_c: Decimal | None = None
-    thermal_conditions: str | None = None
+    ambient_max_c: Decimal | None = Field(
+        default=None,
+        description=(
+            "Maximum explicitly stated ambient operating temperature in degrees Celsius."
+        ),
+    )
+    thermal_conditions: str | None = Field(
+        default=None,
+        description=(
+            "Explicitly stated cooling or thermal condition, such as natural convection, "
+            "forced airflow, heatsinking, or PCB thermal constraints."
+        ),
+    )
 
 
 def build_unconfirmed_requirement_card(

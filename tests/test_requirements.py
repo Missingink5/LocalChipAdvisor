@@ -229,3 +229,28 @@ def test_parse_requirement_request_builds_unconfirmed_review() -> None:
     assert review.card.confirmed_by_user is False
     assert review.missing_fields == ()
     assert review.ready_for_confirmation is True
+
+
+def test_requirement_parser_schema_describes_ambiguous_fields() -> None:
+    schema = RequirementParsePayload.model_json_schema()
+    properties = schema["properties"]
+
+    assert properties["surge_knowledge"]["description"] == (
+        "Input surge status: PRESENT when surge or transient is explicitly present; "
+        "NONE_EXPECTED when the user explicitly says no surge is expected; "
+        "UNKNOWN when the user explicitly says surge status is unknown; "
+        "null only when the user provides no surge information."
+    )
+
+    assert properties["peak_duration_ms"]["description"] == (
+        "Duration in milliseconds of the explicitly stated peak output current."
+    )
+
+    assert properties["ambient_max_c"]["description"] == (
+        "Maximum explicitly stated ambient operating temperature in degrees Celsius."
+    )
+
+    assert properties["thermal_conditions"]["description"] == (
+        "Explicitly stated cooling or thermal condition, such as natural convection, "
+        "forced airflow, heatsinking, or PCB thermal constraints."
+    )

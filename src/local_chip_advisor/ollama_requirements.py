@@ -1,5 +1,7 @@
 """Ollama adapter for structured requirement extraction."""
 
+import json
+
 import httpx
 
 from local_chip_advisor.requirements import (
@@ -29,12 +31,29 @@ class OllamaRequirementParser:
     ) -> None:
         self._model = model
         self._base_url = base_url.rstrip("/")
-        self._client = client or httpx.Client()
+        self._client = client or httpx.Client(
+            trust_env=False,
+            timeout=httpx.Timeout(
+                120.0,
+                connect=5.0,
+            ),
+        )
 
     def parse(
         self,
         raw_request: str,
     ) -> RequirementParsePayload:
+        schema = RequirementParsePayload.model_json_schema()
+        schema_text = json.dumps(
+            schema,
+            ensure_ascii=False,
+        )
+        system_prompt = (
+            f"{_SYSTEM_PROMPT}\n"
+            "JSON schema:\n"
+            f"{schema_text}"
+        )
+
         response = self._client.post(
             f"{self._base_url}/api/chat",
             json={
@@ -42,15 +61,16 @@ class OllamaRequirementParser:
                 "messages": [
                     {
                         "role": "system",
-                        "content": _SYSTEM_PROMPT,
+                        "content": system_prompt,
                     },
                     {
                         "role": "user",
                         "content": raw_request,
                     },
                 ],
-                "format": RequirementParsePayload.model_json_schema(),
+                "format": schema,
                 "stream": False,
+                "think": False,
                 "options": {
                     "temperature": 0,
                 },
