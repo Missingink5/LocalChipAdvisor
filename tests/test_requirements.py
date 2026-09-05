@@ -254,3 +254,195 @@ def test_requirement_parser_schema_describes_ambiguous_fields() -> None:
         "Explicitly stated cooling or thermal condition, such as natural convection, "
         "forced airflow, heatsinking, or PCB thermal constraints."
     )
+
+
+def test_requirement_review_builds_follow_up_question_for_missing_surge() -> None:
+    from local_chip_advisor.requirements import (
+        build_requirement_follow_up_questions,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Complete requirements except surge status.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    review = build_requirement_review(card)
+
+    assert review.missing_fields == ("surge_knowledge",)
+    assert build_requirement_follow_up_questions(review) == (
+        "输入端浪涌情况是什么？请选择：存在浪涌、预计不存在额外浪涌、或目前未知。",
+    )
+
+
+def test_requirement_follow_up_groups_missing_input_voltage_fields() -> None:
+    from local_chip_advisor.requirements import (
+        build_requirement_follow_up_questions,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Complete requirements except input voltage.",
+            "surge_knowledge": "NONE_EXPECTED",
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    review = build_requirement_review(card)
+
+    assert review.missing_fields == (
+        "vin_min_v",
+        "vin_nominal_v",
+        "vin_max_v",
+    )
+    assert build_requirement_follow_up_questions(review) == (
+        "请输入输入电压范围和标称值，例如：18到30V，标称24V。",
+    )
+
+
+def test_requirement_follow_up_groups_missing_output_voltage_fields() -> None:
+    from local_chip_advisor.requirements import (
+        build_requirement_follow_up_questions,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Complete requirements except output voltage.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "surge_knowledge": "NONE_EXPECTED",
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    review = build_requirement_review(card)
+
+    assert review.missing_fields == (
+        "vout_target_v",
+        "vout_tolerance_percent",
+    )
+    assert build_requirement_follow_up_questions(review) == (
+        "请输入目标输出电压和允许误差，例如：5V，允许误差±2%。",
+    )
+
+
+def test_requirement_follow_up_groups_missing_output_current_fields() -> None:
+    from local_chip_advisor.requirements import (
+        build_requirement_follow_up_questions,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Complete requirements except output current.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "surge_knowledge": "NONE_EXPECTED",
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    review = build_requirement_review(card)
+
+    assert review.missing_fields == (
+        "iout_continuous_a",
+        "iout_peak_a",
+        "peak_duration_ms",
+    )
+    assert build_requirement_follow_up_questions(review) == (
+        "请输入持续输出电流、峰值电流和峰值持续时间，例如：持续2.5A，峰值3A持续10ms。",
+    )
+
+
+def test_requirement_follow_up_groups_missing_thermal_fields() -> None:
+    from local_chip_advisor.requirements import (
+        build_requirement_follow_up_questions,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Complete requirements except thermal conditions.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "surge_knowledge": "NONE_EXPECTED",
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "confirmed_by_user": False,
+        }
+    )
+
+    review = build_requirement_review(card)
+
+    assert review.missing_fields == (
+        "ambient_max_c",
+        "thermal_conditions",
+    )
+    assert build_requirement_follow_up_questions(review) == (
+        "请输入最高环境温度和散热条件，例如：最高70°C，自然对流散热。",
+    )
+
+
+def test_requirement_follow_up_groups_missing_surge_detail_fields() -> None:
+    from local_chip_advisor.requirements import (
+        build_requirement_follow_up_questions,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Complete requirements except surge details.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "surge_knowledge": "PRESENT",
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    review = build_requirement_review(card)
+
+    assert review.missing_fields == (
+        "surge_voltage_v",
+        "surge_duration_ms",
+    )
+    assert build_requirement_follow_up_questions(review) == (
+        "请输入输入浪涌电压和持续时间，例如：浪涌最高36V，持续2ms。",
+    )

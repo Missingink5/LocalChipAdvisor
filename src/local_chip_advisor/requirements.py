@@ -50,6 +50,69 @@ def build_requirement_review(
     )
 
 
+def build_requirement_follow_up_questions(
+    review: RequirementReview,
+) -> tuple[str, ...]:
+    """Build deterministic user questions for missing requirements."""
+
+    questions: list[str] = []
+    missing_fields = set(review.missing_fields)
+
+    input_voltage_fields = {
+        "vin_min_v",
+        "vin_nominal_v",
+        "vin_max_v",
+    }
+    if missing_fields & input_voltage_fields:
+        questions.append(
+            "请输入输入电压范围和标称值，例如：18到30V，标称24V。"
+        )
+
+    output_voltage_fields = {
+        "vout_target_v",
+        "vout_tolerance_percent",
+    }
+    if missing_fields & output_voltage_fields:
+        questions.append(
+            "请输入目标输出电压和允许误差，例如：5V，允许误差±2%。"
+        )
+
+    output_current_fields = {
+        "iout_continuous_a",
+        "iout_peak_a",
+        "peak_duration_ms",
+    }
+    if missing_fields & output_current_fields:
+        questions.append(
+            "请输入持续输出电流、峰值电流和峰值持续时间，例如：持续2.5A，峰值3A持续10ms。"
+        )
+
+    thermal_fields = {
+        "ambient_max_c",
+        "thermal_conditions",
+    }
+    if missing_fields & thermal_fields:
+        questions.append(
+            "请输入最高环境温度和散热条件，例如：最高70°C，自然对流散热。"
+        )
+
+    surge_detail_fields = {
+        "surge_voltage_v",
+        "surge_duration_ms",
+    }
+    if missing_fields & surge_detail_fields:
+        questions.append(
+            "请输入输入浪涌电压和持续时间，例如：浪涌最高36V，持续2ms。"
+        )
+
+    if "surge_knowledge" in missing_fields:
+        questions.append(
+            "输入端浪涌情况是什么？请选择：存在浪涌、预计不存在额外浪涌、或目前未知。"
+        )
+
+    return tuple(questions)
+
+
 def confirm_requirement_card(
     card: RequirementCard,
 ) -> RequirementCard:
