@@ -516,7 +516,7 @@ def check_ambient_thermal(
         raise ValueError("thermal_conditions must not be blank")
 
     requirement = (
-        f"ambient maximum={ambient_max_c}?C; "
+        f"ambient maximum={ambient_max_c}°C; "
         f"thermal conditions={thermal_conditions.strip()}"
     )
 
@@ -546,23 +546,23 @@ def check_ambient_thermal(
             field_name="thermal.ambient",
             state=CheckState.UNKNOWN,
             requirement=requirement,
-            actual=f"ambient maximum rating={ambient_rating}?C",
+            actual=f"ambient maximum rating={ambient_rating}°C",
             reason="decisive ambient-temperature evidence is missing",
         )
 
-    actual = f"ambient maximum rating={ambient_rating}?C"
+    actual = f"ambient maximum rating={ambient_rating}°C"
 
     if ambient_max_c > ambient_rating:
         state = CheckState.FAIL
         reason = (
-            f"requested ambient maximum {ambient_max_c}?C exceeds "
-            f"the explicit operating ambient rating of {ambient_rating}?C"
+            f"requested ambient maximum {ambient_max_c}°C exceeds "
+            f"the explicit operating ambient rating of {ambient_rating}°C"
         )
     else:
         state = CheckState.PASS
         reason = (
-            f"requested ambient maximum {ambient_max_c}?C is within "
-            f"the explicit operating ambient rating of {ambient_rating}?C"
+            f"requested ambient maximum {ambient_max_c}°C is within "
+            f"the explicit operating ambient rating of {ambient_rating}°C"
         )
 
     return CheckResult(
