@@ -245,6 +245,22 @@ def parse_requirement_payload_json(
     )
 
 
+def parse_requirement_follow_up(
+    *,
+    card: RequirementCard,
+    raw_follow_up: str,
+    parser: RequirementParser,
+) -> RequirementReview:
+    """Parse a follow-up response, merge it safely, and rebuild the review."""
+
+    parsed = parser.parse(raw_follow_up)
+    updated_card = merge_requirement_follow_up(
+        card=card,
+        parsed=parsed,
+    )
+    return build_requirement_review(updated_card)
+
+
 def parse_requirement_request(
     *,
     raw_request: str,

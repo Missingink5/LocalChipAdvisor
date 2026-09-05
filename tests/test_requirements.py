@@ -618,3 +618,97 @@ def test_merge_requirement_follow_up_rejects_confirmed_card() -> None:
             card=card,
             parsed=parsed_follow_up,
         )
+
+
+def test_parse_requirement_follow_up_merges_and_builds_review() -> None:
+    from local_chip_advisor.requirements import (
+        RequirementParsePayload,
+        parse_requirement_follow_up,
+    )
+
+    class RecordingParser:
+        def __init__(self) -> None:
+            self.received: str | None = None
+
+        def parse(self, raw_request: str) -> RequirementParsePayload:
+            self.received = raw_request
+            return RequirementParsePayload.model_validate(
+                {
+                    "surge_knowledge": "NONE_EXPECTED",
+                }
+            )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Input 18 to 30 V, nominal 24 V, output 5 V.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    parser = RecordingParser()
+
+    review = parse_requirement_follow_up(
+        card=card,
+        raw_follow_up="No additional input surge is expected.",
+        parser=parser,
+    )
+
+    assert parser.received == "No additional input surge is expected."
+    assert review.card.raw_request == card.raw_request
+    assert review.card.surge_knowledge is SurgeKnowledge.NONE_EXPECTED
+    assert review.card.confirmed_by_user is False
+    assert review.missing_fields == ()
+    assert review.ready_for_confirmation is True
+
+
+def test_parse_requirement_follow_up_keeps_review_incomplete_when_fields_remain() -> None:
+    from local_chip_advisor.requirements import (
+        RequirementParsePayload,
+        parse_requirement_follow_up,
+    )
+
+    class StubParser:
+        def parse(self, raw_request: str) -> RequirementParsePayload:
+            return RequirementParsePayload.model_validate(
+                {
+                    "surge_knowledge": "NONE_EXPECTED",
+                }
+            )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Input 18 to 30 V, nominal 24 V.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "confirmed_by_user": False,
+        }
+    )
+
+    review = parse_requirement_follow_up(
+        card=card,
+        raw_follow_up="No additional input surge is expected.",
+        parser=StubParser(),
+    )
+
+    assert review.missing_fields == (
+        "iout_continuous_a",
+        "iout_peak_a",
+        "peak_duration_ms",
+        "ambient_max_c",
+        "thermal_conditions",
+    )
+    assert review.ready_for_confirmation is False
+    assert review.card.confirmed_by_user is False
