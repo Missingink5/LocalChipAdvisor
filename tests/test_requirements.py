@@ -15,6 +15,7 @@ from local_chip_advisor.requirements import (
     build_unconfirmed_requirement_card,
     RequirementParsePayload,
     parse_requirement_payload_json,
+    parse_requirement_request,
 )
 
 
@@ -177,3 +178,54 @@ def test_parse_requirement_payload_json_rejects_markdown_fence() -> None:
 
     with pytest.raises(ValidationError):
         parse_requirement_payload_json(response)
+
+
+class FakeRequirementParser:
+    def __init__(
+        self,
+        payload: RequirementParsePayload,
+    ) -> None:
+        self.payload = payload
+        self.seen_raw_request: str | None = None
+
+    def parse(
+        self,
+        raw_request: str,
+    ) -> RequirementParsePayload:
+        self.seen_raw_request = raw_request
+        return self.payload
+
+
+def test_parse_requirement_request_builds_unconfirmed_review() -> None:
+    raw_request = (
+        "18-30V input, 24V nominal, no surge expected, "
+        "5V ?2%, 2.5A continuous, 3A peak for 10ms, "
+        "70C ambient, natural convection"
+    )
+
+    parser = FakeRequirementParser(
+        RequirementParsePayload(
+            vin_min_v=Decimal("18"),
+            vin_nominal_v=Decimal("24"),
+            vin_max_v=Decimal("30"),
+            surge_knowledge=SurgeKnowledge.NONE_EXPECTED,
+            vout_target_v=Decimal("5"),
+            vout_tolerance_percent=Decimal("2"),
+            iout_continuous_a=Decimal("2.5"),
+            iout_peak_a=Decimal("3"),
+            peak_duration_ms=Decimal("10"),
+            ambient_max_c=Decimal("70"),
+            thermal_conditions="natural convection",
+        )
+    )
+
+    review = parse_requirement_request(
+        raw_request=raw_request,
+        parser=parser,
+    )
+
+    assert parser.seen_raw_request == raw_request
+    assert review.card.raw_request == raw_request
+    assert review.card.confirmed_by_user is False
+    assert review.missing_fields == ()
+    assert review.ready_for_confirmation is True

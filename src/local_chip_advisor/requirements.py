@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -11,6 +12,16 @@ from local_chip_advisor.domain import (
     RequirementCard,
     SurgeKnowledge,
 )
+
+
+class RequirementParser(Protocol):
+    """Adapter contract for automated requirement extraction."""
+
+    def parse(
+        self,
+        raw_request: str,
+    ) -> "RequirementParsePayload":
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,3 +124,20 @@ def parse_requirement_payload_json(
     return RequirementParsePayload.model_validate_json(
         response_text
     )
+
+
+def parse_requirement_request(
+    *,
+    raw_request: str,
+    parser: RequirementParser,
+) -> RequirementReview:
+    """Parse user text into an unconfirmed requirement review."""
+
+    parsed = parser.parse(raw_request)
+
+    card = build_unconfirmed_requirement_card(
+        raw_request=raw_request,
+        parsed=parsed,
+    )
+
+    return build_requirement_review(card)
