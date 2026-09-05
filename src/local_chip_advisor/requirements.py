@@ -204,6 +204,37 @@ def build_unconfirmed_requirement_card(
     )
 
 
+def merge_requirement_follow_up(
+    *,
+    card: RequirementCard,
+    parsed: RequirementParsePayload,
+) -> RequirementCard:
+    """Merge parsed follow-up fields into an unconfirmed requirement card."""
+
+    if card.confirmed_by_user:
+        raise ValueError(
+            "cannot merge follow-up into confirmed requirement card"
+        )
+
+    parsed_updates = parsed.model_dump(
+        exclude_none=True,
+    )
+    updates = {
+        field: value
+        for field, value in parsed_updates.items()
+        if getattr(card, field) is None
+    }
+
+    return RequirementCard.model_validate(
+        {
+            **card.model_dump(),
+            **updates,
+            "raw_request": card.raw_request,
+            "confirmed_by_user": False,
+        }
+    )
+
+
 def parse_requirement_payload_json(
     response_text: str,
 ) -> RequirementParsePayload:

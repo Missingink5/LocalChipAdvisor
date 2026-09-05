@@ -446,3 +446,175 @@ def test_requirement_follow_up_groups_missing_surge_detail_fields() -> None:
     assert build_requirement_follow_up_questions(review) == (
         "请输入输入浪涌电压和持续时间，例如：浪涌最高36V，持续2ms。",
     )
+
+
+def test_merge_requirement_follow_up_preserves_existing_fields() -> None:
+    from local_chip_advisor.requirements import (
+        RequirementParsePayload,
+        merge_requirement_follow_up,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Input 18 to 30 V, nominal 24 V, output 5 V.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    parsed_follow_up = RequirementParsePayload.model_validate(
+        {
+            "surge_knowledge": "NONE_EXPECTED",
+        }
+    )
+
+    updated = merge_requirement_follow_up(
+        card=card,
+        parsed=parsed_follow_up,
+    )
+
+    assert updated.vin_min_v == 18
+    assert updated.vin_nominal_v == 24
+    assert updated.vin_max_v == 30
+    assert updated.vout_target_v == 5
+    assert updated.surge_knowledge is SurgeKnowledge.NONE_EXPECTED
+    assert updated.raw_request == card.raw_request
+    assert updated.confirmed_by_user is False
+    assert updated.missing_minimum_fields() == ()
+
+
+def test_merge_requirement_follow_up_ignores_null_fields() -> None:
+    from local_chip_advisor.requirements import (
+        RequirementParsePayload,
+        merge_requirement_follow_up,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Input 18 to 30 V, nominal 24 V.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "surge_knowledge": "NONE_EXPECTED",
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": None,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    parsed_follow_up = RequirementParsePayload.model_validate(
+        {
+            "vin_min_v": None,
+            "vin_nominal_v": None,
+            "vin_max_v": None,
+            "ambient_max_c": 85,
+        }
+    )
+
+    updated = merge_requirement_follow_up(
+        card=card,
+        parsed=parsed_follow_up,
+    )
+
+    assert updated.vin_min_v == 18
+    assert updated.vin_nominal_v == 24
+    assert updated.vin_max_v == 30
+    assert updated.ambient_max_c == 85
+    assert updated.confirmed_by_user is False
+
+
+def test_merge_requirement_follow_up_does_not_overwrite_existing_fields() -> None:
+    from local_chip_advisor.requirements import (
+        RequirementParsePayload,
+        merge_requirement_follow_up,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Input 18 to 30 V, nominal 24 V, output 5 V.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": False,
+        }
+    )
+
+    parsed_follow_up = RequirementParsePayload.model_validate(
+        {
+            "vin_min_v": 20,
+            "vin_nominal_v": 28,
+            "surge_knowledge": "NONE_EXPECTED",
+        }
+    )
+
+    updated = merge_requirement_follow_up(
+        card=card,
+        parsed=parsed_follow_up,
+    )
+
+    assert updated.vin_min_v == 18
+    assert updated.vin_nominal_v == 24
+    assert updated.surge_knowledge is SurgeKnowledge.NONE_EXPECTED
+
+
+def test_merge_requirement_follow_up_rejects_confirmed_card() -> None:
+    import pytest
+
+    from local_chip_advisor.requirements import (
+        RequirementParsePayload,
+        merge_requirement_follow_up,
+    )
+
+    card = RequirementCard.model_validate(
+        {
+            "raw_request": "Complete confirmed requirement.",
+            "vin_min_v": 18,
+            "vin_nominal_v": 24,
+            "vin_max_v": 30,
+            "surge_knowledge": "NONE_EXPECTED",
+            "vout_target_v": 5,
+            "vout_tolerance_percent": 2,
+            "iout_continuous_a": 2.5,
+            "iout_peak_a": 3,
+            "peak_duration_ms": 10,
+            "ambient_max_c": 70,
+            "thermal_conditions": "natural convection",
+            "confirmed_by_user": True,
+        }
+    )
+
+    parsed_follow_up = RequirementParsePayload.model_validate(
+        {
+            "ambient_max_c": 85,
+        }
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="cannot merge follow-up into confirmed requirement card",
+    ):
+        merge_requirement_follow_up(
+            card=card,
+            parsed=parsed_follow_up,
+        )
