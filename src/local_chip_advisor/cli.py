@@ -1,5 +1,13 @@
 """Command-line presentation helpers."""
 
+import argparse
+
+from local_chip_advisor.advisor import LocalChipAdvisor
+from local_chip_advisor.ollama_requirements import OllamaRequirementParser
+from local_chip_advisor.ranking import (
+    RankingCriterion,
+    RankingPolicy,
+)
 from local_chip_advisor.requirements import RequirementReview
 
 
@@ -126,3 +134,67 @@ def run_cli_session(
     )
 
     return result
+
+
+def main(
+    *,
+    database_path,
+    knowledge_base_version: str,
+    model: str,
+):
+    """Build the default local advisor stack and run one CLI session."""
+
+    parser = OllamaRequirementParser(
+        model=model,
+    )
+
+    advisor = LocalChipAdvisor(
+        parser=parser,
+    )
+
+    policy = RankingPolicy(
+        criteria=(
+            RankingCriterion.CURRENT_HEADROOM,
+        ),
+    )
+
+    return run_cli_session(
+        advisor=advisor,
+        database_path=database_path,
+        knowledge_base_version=knowledge_base_version,
+        policy=policy,
+    )
+
+
+def cli_entrypoint(
+    argv: list[str] | None = None,
+):
+    """Parse command-line arguments and invoke the default CLI stack."""
+
+    parser = argparse.ArgumentParser(
+        prog="local-chip-advisor",
+    )
+    parser.add_argument(
+        "--database-path",
+        required=True,
+    )
+    parser.add_argument(
+        "--knowledge-base-version",
+        required=True,
+    )
+    parser.add_argument(
+        "--model",
+        required=True,
+    )
+
+    args = parser.parse_args(argv)
+
+    return main(
+        database_path=args.database_path,
+        knowledge_base_version=args.knowledge_base_version,
+        model=args.model,
+    )
+
+
+if __name__ == "__main__":
+    cli_entrypoint()

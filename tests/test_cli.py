@@ -379,3 +379,140 @@ def test_run_cli_session_does_not_recommend_without_explicit_yes() -> None:
             "Complete request.",
         ),
     ]
+
+
+def test_main_builds_default_advisor_and_runs_cli_session(
+    monkeypatch,
+) -> None:
+    import local_chip_advisor.cli as cli_module
+
+    calls = {}
+
+    class FakeParser:
+        def __init__(
+            self,
+            *,
+            model: str,
+        ) -> None:
+            calls["model"] = model
+
+    class FakeAdvisor:
+        def __init__(
+            self,
+            *,
+            parser,
+        ) -> None:
+            calls["parser"] = parser
+
+    class FakePolicy:
+        def __init__(
+            self,
+            *,
+            criteria,
+        ) -> None:
+            calls["criteria"] = criteria
+
+    def fake_run_cli_session(**kwargs):
+        calls["session"] = kwargs
+        calls["session_result"] = object()
+        return calls["session_result"]
+
+    monkeypatch.setattr(
+        cli_module,
+        "OllamaRequirementParser",
+        FakeParser,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "LocalChipAdvisor",
+        FakeAdvisor,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "RankingPolicy",
+        FakePolicy,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "run_cli_session",
+        fake_run_cli_session,
+    )
+
+    returned = cli_module.main(
+        database_path="catalog.sqlite3",
+        knowledge_base_version="kb-test",
+        model="test-model",
+    )
+
+    assert calls["model"] == "test-model"
+    assert isinstance(
+        calls["parser"],
+        FakeParser,
+    )
+    assert calls["session"]["database_path"] == "catalog.sqlite3"
+    assert calls["session"]["knowledge_base_version"] == "kb-test"
+    assert calls["session"]["advisor"].__class__ is FakeAdvisor
+    assert returned is calls["session_result"]
+
+
+def test_cli_entrypoint_parses_arguments_and_calls_main(
+    monkeypatch,
+) -> None:
+    import local_chip_advisor.cli as cli_module
+
+    captured = {}
+    expected_result = object()
+
+    def fake_main(**kwargs):
+        captured.update(kwargs)
+        return expected_result
+
+    monkeypatch.setattr(
+        cli_module,
+        "main",
+        fake_main,
+    )
+
+    returned = cli_module.cli_entrypoint(
+        [
+            "--database-path",
+            "catalog.sqlite3",
+            "--knowledge-base-version",
+            "kb-test",
+            "--model",
+            "test-model",
+        ]
+    )
+
+    assert returned is expected_result
+    assert captured == {
+        "database_path": "catalog.sqlite3",
+        "knowledge_base_version": "kb-test",
+        "model": "test-model",
+    }
+
+
+def test_cli_module_can_be_executed_with_python_m() -> None:
+    import subprocess
+    import sys
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "local_chip_advisor.cli",
+            "--help",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    assert "usage:" in completed.stdout
+    assert "--database-path" in completed.stdout
+    assert "--knowledge-base-version" in completed.stdout
+    assert "--model" in completed.stdout
