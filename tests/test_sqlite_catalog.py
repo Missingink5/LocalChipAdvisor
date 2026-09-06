@@ -245,3 +245,293 @@ def test_list_published_products_returns_all_products_for_kb_version(
     )
 
     assert products == (product,)
+
+
+def test_resaving_published_product_preserves_dependent_rows(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    product = published_product()
+    evidence = reviewed_evidence()
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute(
+            """
+            CREATE TABLE product_links (
+                link_id TEXT PRIMARY KEY,
+                product_id TEXT NOT NULL,
+                knowledge_base_version TEXT NOT NULL,
+                FOREIGN KEY (
+                    product_id,
+                    knowledge_base_version
+                )
+                    REFERENCES products (
+                        product_id,
+                        knowledge_base_version
+                    )
+                    ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO product_links (
+                link_id,
+                product_id,
+                knowledge_base_version
+            )
+            VALUES (?, ?, ?)
+            """,
+            (
+                "link:test:mp4570",
+                product.product_id,
+                product.knowledge_base_version,
+            ),
+        )
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        link_count = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM product_links
+            WHERE link_id = ?
+            """,
+            ("link:test:mp4570",),
+        ).fetchone()[0]
+
+    assert link_count == 1
+
+
+def test_resaving_published_catalog_preserves_evidence_dependent_rows(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    product = published_product()
+    evidence = reviewed_evidence()
+    linked_evidence = evidence[0]
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute(
+            """
+            CREATE TABLE evidence_links (
+                link_id TEXT PRIMARY KEY,
+                evidence_id TEXT NOT NULL,
+                knowledge_base_version TEXT NOT NULL,
+                FOREIGN KEY (
+                    evidence_id,
+                    knowledge_base_version
+                )
+                    REFERENCES evidence (
+                        evidence_id,
+                        knowledge_base_version
+                    )
+                    ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO evidence_links (
+                link_id,
+                evidence_id,
+                knowledge_base_version
+            )
+            VALUES (?, ?, ?)
+            """,
+            (
+                "link:test:evidence",
+                linked_evidence.evidence_id,
+                linked_evidence.knowledge_base_version,
+            ),
+        )
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    with sqlite3.connect(database_path) as connection:
+        link_count = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM evidence_links
+            WHERE link_id = ?
+            """,
+            ("link:test:evidence",),
+        ).fetchone()[0]
+
+    assert link_count == 1
+
+
+def test_resaving_same_evidence_id_with_changed_payload_is_rejected(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    product = published_product()
+    evidence = reviewed_evidence()
+
+    save_published_catalog(
+        database_path=database_path,
+        product=product,
+        evidence=evidence,
+    )
+
+    changed_evidence = (
+        evidence[0].model_copy(
+            update={
+                "page": evidence[0].page + 1,
+            }
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="evidence conflict",
+    ):
+        save_published_catalog(
+            database_path=database_path,
+            product=product,
+            evidence=changed_evidence,
+        )
+
+
+@pytest.mark.parametrize(
+    "reader_name",
+    (
+        "load",
+        "find",
+        "list",
+    ),
+)
+def test_read_operations_do_not_create_missing_database_or_parent(
+    tmp_path: Path,
+    reader_name: str,
+) -> None:
+    database_path = (
+        tmp_path
+        / "missing-parent"
+        / "catalog.sqlite3"
+    )
+
+    with pytest.raises(FileNotFoundError):
+        if reader_name == "load":
+            load_published_catalog(
+                database_path=database_path,
+                product_id="MPS-MP4570",
+                knowledge_base_version="kb-test-v1",
+            )
+        elif reader_name == "find":
+            find_published_candidates(
+                database_path=database_path,
+                knowledge_base_version="kb-test-v1",
+                operating_vin_min_v=Decimal("18"),
+                operating_vin_max_v=Decimal("30"),
+                continuous_iout_a=Decimal("2.5"),
+                requested_vout_v=Decimal("5"),
+            )
+        else:
+            list_published_products(
+                database_path=database_path,
+                knowledge_base_version="kb-test-v1",
+            )
+
+    assert not database_path.exists()
+    assert not database_path.parent.exists()
+
+
+@pytest.mark.parametrize(
+    "reader_name",
+    (
+        "load",
+        "find",
+        "list",
+    ),
+)
+def test_read_operations_do_not_initialize_schema(
+    tmp_path: Path,
+    reader_name: str,
+) -> None:
+    database_path = tmp_path / "catalog.sqlite3"
+
+    with sqlite3.connect(database_path):
+        pass
+
+    with sqlite3.connect(database_path) as connection:
+        schema_before = tuple(
+            row[0]
+            for row in connection.execute(
+                """
+                SELECT name
+                FROM sqlite_schema
+                WHERE type = 'table'
+                  AND name NOT LIKE 'sqlite_%'
+                ORDER BY name
+                """
+            ).fetchall()
+        )
+
+    assert schema_before == ()
+
+    try:
+        if reader_name == "load":
+            load_published_catalog(
+                database_path=database_path,
+                product_id="MPS-MP4570",
+                knowledge_base_version="kb-test-v1",
+            )
+        elif reader_name == "find":
+            find_published_candidates(
+                database_path=database_path,
+                knowledge_base_version="kb-test-v1",
+                operating_vin_min_v=Decimal("18"),
+                operating_vin_max_v=Decimal("30"),
+                continuous_iout_a=Decimal("2.5"),
+                requested_vout_v=Decimal("5"),
+            )
+        else:
+            list_published_products(
+                database_path=database_path,
+                knowledge_base_version="kb-test-v1",
+            )
+    except (KeyError, sqlite3.DatabaseError):
+        pass
+
+    with sqlite3.connect(database_path) as connection:
+        schema_after = tuple(
+            row[0]
+            for row in connection.execute(
+                """
+                SELECT name
+                FROM sqlite_schema
+                WHERE type = 'table'
+                  AND name NOT LIKE 'sqlite_%'
+                ORDER BY name
+                """
+            ).fetchall()
+        )
+
+    assert schema_after == ()

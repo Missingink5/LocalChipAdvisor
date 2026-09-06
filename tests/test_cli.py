@@ -516,3 +516,262 @@ def test_cli_module_can_be_executed_with_python_m() -> None:
     assert "--database-path" in completed.stdout
     assert "--knowledge-base-version" in completed.stdout
     assert "--model" in completed.stdout
+
+
+def test_format_recommendation_result_handles_real_formal_recommendation() -> None:
+    from decimal import Decimal
+
+    from local_chip_advisor.cli import format_recommendation_result
+    from local_chip_advisor.domain import (
+        CandidateBucket,
+        CandidateEvaluation,
+        CheckResult,
+        CheckState,
+        PublicationStatus,
+    )
+    from local_chip_advisor.domain.product import BuckProductRecord
+    from local_chip_advisor.ranking import (
+        CriterionResult,
+        RankingCriterion,
+    )
+    from local_chip_advisor.recommendation import (
+        FormalRecommendation,
+        RecommendationResult,
+    )
+    from local_chip_advisor.screening import ScreenedCandidate
+
+    product = BuckProductRecord(
+        product_id="MPS-TEST-FORMAL",
+        manufacturer="Monolithic Power Systems (MPS)",
+        base_part_number="TEST-FORMAL",
+        orderable_part_numbers=("TEST-FORMAL",),
+        knowledge_base_version="kb-test",
+        publication_status=PublicationStatus.PUBLISHED,
+    )
+
+    check = CheckResult(
+        rule_id="vin.range",
+        field_name="vin.range",
+        state=CheckState.PASS,
+        requirement="input voltage must cover 18V to 30V",
+        actual="4.5V to 55V",
+        reason="reviewed operating range covers the requirement",
+        evidence_ids=("ev:test:vin",),
+    )
+
+    evaluation = CandidateEvaluation(
+        product_id=product.product_id,
+        publication_status=PublicationStatus.PUBLISHED,
+        checks=(check,),
+        bucket=CandidateBucket.FORMAL,
+    )
+
+    screened_candidate = ScreenedCandidate(
+        product=product,
+        evaluation=evaluation,
+        evidence=(),
+    )
+
+    formal = FormalRecommendation(
+        rank=1,
+        candidate=screened_candidate,
+        ranking_criteria=(
+            CriterionResult(
+                criterion=RankingCriterion.CURRENT_HEADROOM,
+                value=Decimal("0.5"),
+            ),
+        ),
+        key_evidence=(),
+    )
+
+    result = RecommendationResult(
+        formal=(formal,),
+        near_match=(),
+        needs_verification=(),
+    )
+
+    text = format_recommendation_result(result)
+
+    assert "formal:" in text
+    assert "MPS-TEST-FORMAL" in text
+    assert "vin.range" in text
+    assert "PASS" in text
+    assert "near_match: none" in text
+    assert "needs_verification: none" in text
+
+
+def test_format_recommendation_result_handles_all_three_real_buckets() -> None:
+    from decimal import Decimal
+
+    from local_chip_advisor.cli import format_recommendation_result
+    from local_chip_advisor.domain import (
+        CandidateBucket,
+        CandidateEvaluation,
+        CheckResult,
+        CheckState,
+        PublicationStatus,
+    )
+    from local_chip_advisor.domain.product import BuckProductRecord
+    from local_chip_advisor.ranking import (
+        CriterionResult,
+        RankingCriterion,
+    )
+    from local_chip_advisor.recommendation import (
+        CandidateIssue,
+        FlaggedCandidate,
+        FormalRecommendation,
+        RecommendationResult,
+    )
+    from local_chip_advisor.screening import ScreenedCandidate
+
+    def make_product(product_id: str) -> BuckProductRecord:
+        return BuckProductRecord(
+            product_id=product_id,
+            manufacturer="Monolithic Power Systems (MPS)",
+            base_part_number=product_id,
+            orderable_part_numbers=(product_id,),
+            knowledge_base_version="kb-test",
+            publication_status=PublicationStatus.PUBLISHED,
+        )
+
+    formal_product = make_product("MPS-FORMAL")
+    formal_check = CheckResult(
+        rule_id="vin.range",
+        field_name="vin.range",
+        state=CheckState.PASS,
+        requirement="VIN must cover the operating range",
+        actual="4.5V to 55V",
+        reason="reviewed range covers the requirement",
+        evidence_ids=("ev:test:formal-vin",),
+    )
+    formal_screened = ScreenedCandidate(
+        product=formal_product,
+        evaluation=CandidateEvaluation(
+            product_id=formal_product.product_id,
+            publication_status=PublicationStatus.PUBLISHED,
+            checks=(formal_check,),
+            bucket=CandidateBucket.FORMAL,
+        ),
+        evidence=(),
+    )
+    formal = FormalRecommendation(
+        rank=1,
+        candidate=formal_screened,
+        ranking_criteria=(
+            CriterionResult(
+                criterion=RankingCriterion.CURRENT_HEADROOM,
+                value=Decimal("0.5"),
+            ),
+        ),
+        key_evidence=(),
+    )
+
+    near_product = make_product("MPS-NEAR")
+    near_check = CheckResult(
+        rule_id="iout.continuous",
+        field_name="iout.continuous",
+        state=CheckState.FAIL,
+        requirement="continuous current must be at least 3A",
+        actual="2.5A",
+        reason="continuous-current rating is below the requirement",
+        evidence_ids=("ev:test:near-iout",),
+    )
+    near_screened = ScreenedCandidate(
+        product=near_product,
+        evaluation=CandidateEvaluation(
+            product_id=near_product.product_id,
+            publication_status=PublicationStatus.PUBLISHED,
+            checks=(near_check,),
+            bucket=CandidateBucket.NEAR_MATCH,
+        ),
+        evidence=(),
+    )
+    near = FlaggedCandidate(
+        candidate=near_screened,
+        issues=(
+            CandidateIssue(
+                rule_id=near_check.rule_id,
+                state=near_check.state,
+                requirement=near_check.requirement,
+                actual=near_check.actual,
+                reason=near_check.reason,
+                evidence=(),
+            ),
+        ),
+    )
+
+    verification_product = make_product("MPS-VERIFY")
+    verification_check = CheckResult(
+        rule_id="thermal.ambient",
+        field_name="thermal.ambient",
+        state=CheckState.UNKNOWN,
+        requirement="ambient operation must be supported at 70C",
+        actual=None,
+        reason="applicable thermal evidence is missing",
+        evidence_ids=(),
+    )
+    verification_screened = ScreenedCandidate(
+        product=verification_product,
+        evaluation=CandidateEvaluation(
+            product_id=verification_product.product_id,
+            publication_status=PublicationStatus.PUBLISHED,
+            checks=(verification_check,),
+            bucket=CandidateBucket.NEEDS_VERIFICATION,
+        ),
+        evidence=(),
+    )
+    verification = FlaggedCandidate(
+        candidate=verification_screened,
+        issues=(
+            CandidateIssue(
+                rule_id=verification_check.rule_id,
+                state=verification_check.state,
+                requirement=verification_check.requirement,
+                actual=verification_check.actual,
+                reason=verification_check.reason,
+                evidence=(),
+            ),
+        ),
+    )
+
+    result = RecommendationResult(
+        formal=(formal,),
+        near_match=(near,),
+        needs_verification=(verification,),
+    )
+
+    output = format_recommendation_result(result)
+
+    assert "formal:" in output
+    assert "MPS-FORMAL" in output
+    assert "vin.range" in output
+    assert "PASS" in output
+
+    assert "near_match:" in output
+    assert "MPS-NEAR" in output
+    assert "iout.continuous" in output
+    assert "FAIL" in output
+
+    assert "needs_verification:" in output
+    assert "MPS-VERIFY" in output
+    assert "thermal.ambient" in output
+    assert "UNKNOWN" in output
+
+
+def test_format_recommendation_result_handles_all_empty_buckets() -> None:
+    from local_chip_advisor.cli import format_recommendation_result
+    from local_chip_advisor.recommendation import RecommendationResult
+
+    result = RecommendationResult(
+        formal=(),
+        near_match=(),
+        needs_verification=(),
+    )
+
+    output = format_recommendation_result(result)
+
+    assert output == (
+        "formal: none\n"
+        "near_match: none\n"
+        "needs_verification: none"
+    )

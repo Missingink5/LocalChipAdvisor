@@ -1,0 +1,432 @@
+# LocalChipAdvisor Implementation Progress
+
+## Execution record 2026-09-06
+
+- Current step: S02 technical acceptance complete; stopped before S03; B06 human provenance pending
+- Goal: establish a reproducible implementation ledger before feature fixes.
+- HEAD before this step: `e2fedd6 Add executable CLI entrypoint`
+- Branch: `feat/product-record`
+- Existing uncommitted files before this step:
+  - `9.6项目进度以及后续步骤.md` - untracked, preserve
+  - `tests/test_packaging.py` ? untracked, preserve
+- Applicable `AGENTS.md`: none found.
+- Project interpreter: `D:\LocalChipAdvisor\.venv\python.exe`
+- Python version: `3.11.16`
+- CLI module entrypoint:
+  - `python -m local_chip_advisor.cli --help` works
+  - console-script packaging registration is not yet present
+- Baseline pytest command:
+  - `.venv\python.exe -B -m pytest -p no:cacheprovider --basetemp <fresh-temp-dir> -q`
+- Baseline pytest result:
+  - `114 passed`
+  - `1 failed`
+  - failure: `tests/test_packaging.py::test_pyproject_registers_cli_console_script`
+  - cause: `KeyError: 'scripts'`
+  - classification: known existing failure B01
+  - new failures: none observed
+  - environment failures: none observed
+
+## Current data baseline
+
+- Catalog database:
+  - `data/processed/catalog.sqlite3`
+  - file exists
+  - database contents were re-audited by the S00 read-only audit script
+- Current raw product-document scope observed:
+  - MP4570 datasheet
+  - MP4570 source metadata
+  - MP4570 draft product record
+  - MP4570 draft evidence record
+- Do not infer publication/review authority from draft files alone.
+- No product publication state will be changed during S00.
+
+## Current model baseline
+
+- `models/ollama/` exists on disk.
+- Disk presence is not proof that a model is callable.
+- Model API/runtime verification remains a later explicit step.
+- No embedding-model verification has been performed in S00.
+
+## Current implementation baseline
+
+Confirmed existing:
+- requirement parsing
+- requirement review / follow-up / explicit confirmation
+- LocalChipAdvisor application orchestration
+- deterministic screening / recommendation pipeline
+- SQLite catalog storage
+- module CLI entrypoint
+
+Not yet treated as implemented:
+- document knowledge repository
+- BM25 retrieval
+- vector retrieval
+- hybrid retrieval
+- query-understanding layer
+- evidence bundle
+- document QA service
+- answer validation pipeline
+- retrieval evaluation pipeline
+- knowledge snapshot activation / rollback
+
+Dependency declarations do not count as implementation.
+
+## Open issues B01-B10
+
+- B01: packaging console-script registration is missing.
+- B02: formal recommendation CLI formatting does not match the real FormalRecommendation object structure.
+- B03: output-voltage tolerance is collected but not fully consumed by qualification rules.
+- B04: thermal qualification does not fully model cooling / PCB / load applicability.
+- B05: PRESENT surge does not yet have a complete transient qualification model.
+- B06: published catalog state and draft/source review metadata require an audit trail explanation.
+- B07: `INSERT OR REPLACE` persistence semantics must be replaced safely before relational expansion.
+- B08: some read paths are mixed with schema initialization and must be separated.
+- B09: project documentation contains stale historical statements and must be updated from evidence.
+- B10: CLI confirmation does not yet show the full parsed requirement card before explicit confirmation.
+
+## S00 status
+
+Completed:
+- S00.1: checked current git state, HEAD, source tree, interpreter, CLI module entrypoint.
+- S00.2: ran a clean baseline pytest using a fresh temp directory and no pytest cache.
+- S00.3: confirmed that the implementation ledger and audit script did not already exist.
+- S00.4: created the implementation ledger.
+
+### S00.5 read-only catalog audit
+
+Audit script:
+- `scripts/audit_baseline.py`
+- opens the database through SQLite URI `mode=ro`
+- does not use catalog repository initialization code
+
+Safety checks:
+- help exit code: `0`
+- missing database exit code: `2`
+- missing database was not created: `False`
+
+Observed catalog state:
+- `PRAGMA user_version = 0`
+- tables: `evidence`, `products`
+- products: `1`
+- evidence: `3`
+- `PRAGMA integrity_check = ok`
+- foreign-key violations: `0`
+- product: `MPS-MP4570@kb-dev-v1`
+- publication status: `PUBLISHED`
+- product evidence bindings observed: `5`
+- reviewed evidence rows: `3/3`
+- missing bound evidence references: `0`
+- audit status: `OK`
+
+Important interpretation:
+- `user_version=0` is an existing populated schema, not evidence of an empty database.
+- The audit confirms technical consistency only.
+- It does not resolve B06 publication-history provenance.
+- It does not authorize changing review or publication state.
+
+### S00 final review
+
+Verified before closing S00:
+- implementation ledger reviewed
+- audit script reviewed
+- packaging red test preserved
+- whitespace checks passed
+- audit script syntax check passed
+- no catalog database modification observed
+- working tree contains only the expected untracked project artifacts
+
+## S01 completion record
+
+Completed:
+- B01 packaging console-script registration:
+  - added `[project.scripts]`
+  - registered `local-chip-advisor = "local_chip_advisor.cli:cli_entrypoint"`
+  - packaging regression test passes
+- B02 formal recommendation CLI formatting:
+  - reproduced the real `FormalRecommendation` object-structure failure first
+  - formal output now reads `item.candidate.product_id`
+  - formal output now reads deterministic checks from `item.candidate.evaluation.checks`
+  - non-formal output continues to use `FlaggedCandidate.product_id` and `.issues`
+- added regression coverage for:
+  - one real formal recommendation
+  - formal / near_match / needs_verification all present
+  - all three buckets empty
+- explicit yes-confirmation CLI behavior remains covered
+
+Final S01 validation:
+- full pytest: `118 passed`
+- full pytest exit code: `0`
+- `git diff --check`: passed
+- changed-file Ruff:
+  - `src/local_chip_advisor/cli.py`
+  - `tests/test_cli.py`
+  - `tests/test_packaging.py`
+  - result: passed
+- repository-wide Ruff still reports pre-existing lint debt outside the S01 change set
+- mypy still reports pre-existing type-checking debt in:
+  - `src/local_chip_advisor/cli.py`
+  - `src/local_chip_advisor/ingestion/pdf_parser.py`
+- no product data or catalog database changes were made during S01
+- editable installation was not performed because direct console-command installation was not requested
+
+## S02 audit record
+
+### B06 publication provenance classification
+
+Observed facts:
+- `source.json` reports `human_reviewed=false` and `release_status=draft`
+- the draft product remains `publication_status=DRAFT`
+- all three draft evidence records already have `reviewed=true`
+- published SQLite contains the same three evidence records with `reviewed=true`
+- draft and published evidence payloads have no differing fields
+- draft and published product payloads differ only in `publication_status`
+- the source manifest, draft product, draft evidence, and processed SQLite catalog are not Git-tracked data artifacts
+
+Conclusion:
+- B06 is not currently an evidence-payload mismatch between draft and published storage
+- the DRAFT-to-PUBLISHED product transition is consistent with the immutable publication-gate design
+- the unresolved issue is publication provenance: the repository does not currently prove who reviewed/approved the evidence, when approval occurred, or what approval record authorized the published catalog state
+- do not automatically change `source.json` to `human_reviewed=true`
+- do not automatically revert the existing published catalog
+- closing B06 requires an explicit human approval/provenance record or equivalent evidence
+
+S02.1 backup:
+- SQLite Backup API backup created and validated
+- backup integrity check: `ok`
+- foreign-key violations: `0`
+- products: `1`
+- evidence: `3`
+- source database remained byte-for-byte unchanged during backup
+
+## B07 completion record
+
+Completed:
+- reproduced the product `INSERT OR REPLACE` delete-and-insert behavior with a real SQLite foreign-key regression test
+- confirmed that repeated product saves previously cascade-deleted dependent product rows
+- replaced product `INSERT OR REPLACE` with explicit:
+  - `INSERT ... ON CONFLICT (product_id, knowledge_base_version) DO UPDATE`
+- reproduced the evidence delete-and-reinsert problem with a second real foreign-key regression test
+- removed unconditional deletion of all evidence during ordinary repeated saves
+- repeated saves of identical evidence now preserve the existing row and dependent links
+- the same `evidence_id` plus `knowledge_base_version` with a changed payload now raises an explicit `evidence conflict`
+- new evidence IDs are inserted without rewriting unchanged evidence rows
+
+B07 validation:
+- SQLite catalog focused suite: `10 passed`
+- publication gate plus SQLite catalog joint regression: `13 passed`
+- `src/local_chip_advisor/catalog/sqlite_store.py` Ruff: passed
+- `git diff --check`: passed
+- `tests/test_sqlite_catalog.py` still has 18 pre-existing Ruff findings in the existing test region; no reported Ruff finding is in the newly added B07 regression-test region
+
+## B08 completion record
+
+Completed:
+- reproduced read-side schema mutation against an existing empty SQLite database
+- confirmed missing database paths already raised `FileNotFoundError` without creating the parent directory or database file
+- confirmed `load`, `find`, and `list` previously initialized `products` and `evidence` during ordinary reads
+- split SQLite connections into explicit writable and read-only roles
+- writable connections may create parent directories and initialize schema
+- read-only connections require an existing database and use SQLite `mode=ro`
+- read-only connections enable `PRAGMA query_only = ON`
+- `load_published_catalog`, `find_published_candidates`, and `list_published_products` no longer call schema initialization
+- ordinary reads no longer create directories, database files, or tables
+
+B08 validation:
+- focused read-side regression: `6 passed`
+- SQLite catalog plus publication gate joint regression: `19 passed`
+- `src/local_chip_advisor/catalog/sqlite_store.py` Ruff: passed
+- `git diff --check`: passed
+
+## S02 schema migration completion record
+
+Completed:
+- audited the live catalog schema read-only and confirmed `user_version=0` is a populated legacy schema, not an empty database
+- locked the legacy-v0 structural fingerprint for:
+  - `products`
+  - `evidence`
+  - composite primary keys
+  - the composite evidence-to-products foreign key with `ON DELETE CASCADE`
+- added explicit catalog migration API in:
+  - `src/local_chip_advisor/catalog/sqlite_migrations.py`
+- established `CURRENT_SCHEMA_VERSION = 1`
+- defined v1 as a metadata-only baseline over the audited legacy structure
+- added explicit migration reports containing:
+  - `from_version`
+  - `to_version`
+  - planned `changes`
+  - legacy-v0 detection
+  - dry-run state
+  - applied state
+- implemented read-only dry-run behavior
+- implemented explicit `user_version 0 -> 1` activation inside a write transaction
+- repeated migration at v1 is idempotent and performs no write
+- unsupported/future schema versions are rejected before dry-run can return a report
+- malformed legacy-v0 schemas are rejected
+- current-v1 databases must match the expected structural fingerprint
+- both legacy-v0 and current-v1 preflight paths run `PRAGMA foreign_key_check`
+- execution re-checks the legacy fingerprint and foreign-key integrity before activating v1
+- migration failure due to foreign-key violations leaves `user_version=0`
+- ordinary live catalog migration was not performed
+
+Focused migration validation:
+- migration suite: `10 passed`
+- migration source and migration-test Ruff: passed
+- explicit whitespace checks for untracked migration files: passed
+- `git diff --check`: passed
+
+Real database validation:
+- S02 archive backup:
+  - `backups/catalog-s02-20260906-091435.sqlite3`
+- archive backup dry-run:
+  - detected legacy-v0
+  - reported `0 -> 1`
+  - reported change: `set user_version from 0 to 1`
+  - `dry_run=True`
+  - `applied=False`
+  - products remained `1`
+  - evidence remained `3`
+  - backup SHA-256 remained unchanged
+- real migration was executed only on a temporary copy of the archive backup
+- temporary copy migration:
+  - v0 -> v1 succeeded
+  - integrity check: `ok`
+  - foreign-key violations: `0`
+  - product rows preserved exactly
+  - evidence rows preserved exactly
+  - second migration was a no-op
+  - second migration left file hash and database state unchanged
+- the archive backup itself remained unchanged
+- the live catalog was not migrated
+
+S02 regression checkpoint:
+- full pytest: `137 passed`
+- full pytest exit code: `0`
+- `git diff --check`: passed
+
+## Next single priority action
+
+`S02.38+`: define the audit/review record contract before adding audit or review tables.
+
+The governing implementation plan requires explicit review provenance, but it does not define exact SQL fields. The next step must therefore lock the semantic contract first: reviewed object identity/type, review conclusion, basis/evidence, operator, and retained history. Do not fabricate a historical approval record for the existing published MP4570 catalog, and do not change `human_reviewed` or publication state without explicit evidence.
+
+## Acceptance state
+
+S00: completed.
+S01: completed.
+S02: technical acceptance complete; B06 human provenance pending. S03: not started.
+
+
+## S02.54-S02.60 final acceptance (2026-09-06)
+
+# LocalChipAdvisor：S02 技术验收与 S03 交接
+
+日期：2026-09-06。**已停在 S03 之前，S03 未开始。**
+
+## 验收结论
+
+S02 的数据库安全基础、迁移机制、审核领域契约与后续持久化设计已完成技术验收。B06 历史人工审批来源仍待真实证据核对，不能宣称历史审批已经完成或所有发布资格已获确认。按指南，这限制正式资格扩展，不阻塞公开文档开发。
+
+## 从哪里接手
+
+- HEAD：`e2fedd6 Add executable CLI entrypoint`，保留用户既有未提交工作。
+- 从 S02.54 接手；当时 ReviewRecord 已有对象、结论、依据、审核人和记录时间字段，但没有时间运行时校验。
+- 本地尚无 S02.54 的无时区反例测试。
+- 前序台账记录 S00、S01 完成，迁移检查点为全套 137 passed；这是历史数字。
+
+## 本轮实际完成
+
+### S02.54 / S02.55：时间契约 RED → GREEN
+
+先加入无时区时间反例，实测 **1 failed、6 passed**，失败为 `DID NOT RAISE ValueError`。加入校验后 **7 passed**。
+
+现在拒绝非 datetime 值及没有有效时区偏移的时间，接受带明确偏移的非 UTC 时间。不会自动猜时区或补造历史审批时间。
+
+### S02.56 / S02.57：审核记录的有效性和版本
+
+先验证缺少新字段和行为的失败，再实现以下约束；审核模型最终 **41 passed**。
+
+- 新增必填 `review_id`、`object_version`，区分事件及对象版本。
+- 对象 ID、版本、依据、审核人不得为空、纯空白或错误类型。
+- 审核范围限定为 `document` / `evidence`，两种范围不互相授予资格。
+- 结论限定为 `approved` / `rejected` / `pending` / `revoked`。
+- 记录保持不可变；可用 `supersedes` 指向旧事件，拒绝空引用和自引用。
+- 验证版本不同的对象保持不同身份，历史记录不会因新结论被修改。
+
+这些属于结构和行为校验。非空依据不证明内容真实；创建对象不认证审核人、不写入数据库、不发布产品，也不自动解决 B06。事件唯一性、对象存在性、历史引用与有效资格仍需后续仓储核验。
+
+### S02.58：数据库独立审查与修复
+
+新测试先得到 **4 failed、1 passed**，暴露了保存/迁移的真实缺口。修复包括：
+
+- 新路径首次创建为 v1；已有合法 legacy 保存时仍保持 v0，不暗中迁移。
+- 拒绝未来版本、缺核心表、核心结构异常和外键坏链；不替异常库静默补表。
+- 同一产品、同一 KB 版本内容不同，明确报 `product conflict`，要求新版本。
+- 保留前序 UPSERT、证据冲突检查和额外关联表兼容性，重复保存仍保留链接。
+- 迁移指纹补查列类型、NOT NULL、默认值，并增加完整性检查。
+- 迁移事务内重新核对版本、结构和外键，失败不激活版本。
+- 使用 `closing` 明确关闭生产连接，避免 Windows 文件句柄滞留。
+
+迁移、原存储和新守卫联合验收：**32 passed**。
+
+### S02.59：审核设计与后续实现边界
+
+更新审核契约文档，明确追加事件、保留历史、撤销不删除历史、精确版本绑定、发布事件引用审核事件。
+
+跨库链接设计采用 `catalog_snapshot_id + knowledge_base_version + evidence_id`，并要求核验登记文档、片段、原文区间、产品和版本；缺来源、错版本、断链等必须拒绝。
+
+**实际 knowledge 仓储、审核 CLI、跨库查询校验留在 S05 实现**；快照激活及缓存失效生命周期在 S17。这些没有冒充已完成。S02 完成语义/接口设计，符合指南的阶段边界。
+
+### S02.60：最终验收
+
+| 检查 | 实际结果 |
+|---|---|
+| 全套 pytest | **184 passed in 3.68s** |
+| 审核模型 | 41 passed |
+| 迁移、存储、新守卫 | 32 passed |
+| 本轮相关 3 个生产模块、3 个测试文件 Ruff | 通过 |
+| git diff --check | 通过 |
+| 全仓库 Ruff | **未通过：109 条问题**，位于本轮未修改文件 |
+| 全仓库 mypy | **未通过：10 条错误**，位于 cli.py、ingestion/pdf_parser.py |
+
+全仓库 lint/type 问题所在文件和类别与原台账的欠账一致；本轮没有扩展到无关清理。不能将 pytest 全绿写成“所有检查全绿”。
+
+## 真实数据库验证
+
+对已有归档备份做只读预演，再用 SQLite Backup API 创建独立临时副本执行迁移：
+
+- 预演报告 `0 → 1`、变更摘要和 `applied=false`。
+- 临时副本迁移成功，完整性检查 `ok`，外键检查无违例。
+- **1 款产品、3 条证据的全部行内容迁移前后一致。**
+- 第二次迁移无变化、`applied=false`，文件哈希不变。
+- **正式库及原归档备份哈希均未改变；正式库仍为 v0。**
+
+正式库 SHA-256：`3b09ce24254ceb13f5a947e2e11f7f13b673ff79cf86b70da1962099257b12d4`
+
+归档备份 SHA-256：`a2a1cad3da6d569ac8842236036273353196bf2c444dd367f250a24ee1ae6cc9`
+
+## 本轮文件清单
+
+- `src/local_chip_advisor/domain/review.py`：审核校验、版本、历史标识。
+- `tests/test_review_audit_models.py`：审核行为测试、旧夹具必填字段更新。
+- `src/local_chip_advisor/catalog/sqlite_migrations.py`：完整指纹、完整性检查、连接关闭。
+- `src/local_chip_advisor/catalog/sqlite_store.py`：保存守卫、产品冲突、连接关闭。
+- `tests/test_s02_database_guards.py`：新增数据库回归测试。
+- `docs/review_audit_contract.md`：可执行契约及 S05 交接。
+- `docs/implementation_progress.md`：完成记录与最新停止点。
+
+保留既有未提交工作；未提交或推送 Git，未改变实际产品发布/审核状态。
+
+## B06 人工缺口
+
+现有 `PUBLISHED` / `reviewed=true` 本身不能证明谁在何时审核了哪些资料。仍需真实审核者、资料版本、参数条件和可追溯审批依据。
+
+没有自动设置 `human_reviewed=true`，没有捏造审核人、时间或依据，也没有自动回退已发布产品。状态保持 **pending human provenance**。
+
+## 停止点
+
+S03 未开始，未修改工程规则和 required rule 集合。下一次先建立“需求字段 → 单位 → 对应规则 → 所需证据 → 未覆盖状态”的矩阵，再处理输出误差、热工况和浪涌边界。
+
+
+## Authoritative next single priority action
+
+S03: not started. Await user continuation before implementing the requirements-to-rule coverage matrix. Earlier next-action entries are historical checkpoints superseded by this record. B06 remains pending human provenance.

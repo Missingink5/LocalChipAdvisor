@@ -5,19 +5,45 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Iterable
+from contextlib import closing
 from decimal import Decimal
 from pathlib import Path
 
+from local_chip_advisor.catalog.sqlite_migrations import (
+    CURRENT_SCHEMA_VERSION,
+    _is_legacy_v0_catalog,
+)
 from local_chip_advisor.domain import EvidenceRef, PublicationStatus
 from local_chip_advisor.domain.product import BuckProductRecord
 
 
-def _connect(database_path: str | Path) -> sqlite3.Connection:
+def _connect_writable(
+    database_path: str | Path,
+) -> sqlite3.Connection:
     path = Path(database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     connection = sqlite3.connect(path)
     connection.execute("PRAGMA foreign_keys = ON")
+    return connection
+
+
+def _connect_readonly(
+    database_path: str | Path,
+) -> sqlite3.Connection:
+    path = Path(database_path)
+
+    if not path.is_file():
+        raise FileNotFoundError(path)
+
+    database_uri = path.resolve(strict=True).as_uri() + "?mode=ro"
+
+    connection = sqlite3.connect(
+        database_uri,
+        uri=True,
+    )
+    connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA query_only = ON")
     return connection
 
 
@@ -60,9 +86,7 @@ def save_published_catalog(
     """Persist one published product and its reviewed evidence atomically."""
 
     if product.publication_status is not PublicationStatus.PUBLISHED:
-        raise ValueError(
-            "only PUBLISHED products may enter the published SQLite catalog"
-        )
+        raise ValueError("only PUBLISHED products may enter the published SQLite catalog")
 
     evidence_items = tuple(evidence)
 
@@ -72,36 +96,24 @@ def save_published_catalog(
         for evidence_id in evidence_ids
     }
 
-    supplied_evidence_ids = {
-        item.evidence_id
-        for item in evidence_items
-    }
+    supplied_evidence_ids = {item.evidence_id for item in evidence_items}
 
-    missing_evidence_ids = (
-        bound_evidence_ids - supplied_evidence_ids
-    )
+    missing_evidence_ids = bound_evidence_ids - supplied_evidence_ids
 
     if missing_evidence_ids:
         missing = ", ".join(sorted(missing_evidence_ids))
-        raise ValueError(
-            f"missing bound evidence: {missing}"
-        )
+        raise ValueError(f"missing bound evidence: {missing}")
 
     for item in evidence_items:
         if not item.reviewed:
-            raise ValueError(
-                f"published evidence must be reviewed: {item.evidence_id}"
-            )
+            raise ValueError(f"published evidence must be reviewed: {item.evidence_id}")
 
         if item.product_id != product.product_id:
-            raise ValueError(
-                f"evidence belongs to another product: {item.evidence_id}"
-            )
+            raise ValueError(f"evidence belongs to another product: {item.evidence_id}")
 
         if item.knowledge_base_version != product.knowledge_base_version:
             raise ValueError(
-                f"evidence belongs to another knowledge-base version: "
-                f"{item.evidence_id}"
+                f"evidence belongs to another knowledge-base version: {item.evidence_id}"
             )
 
     product_json = json.dumps(
@@ -110,12 +122,29 @@ def save_published_catalog(
         sort_keys=True,
     )
 
-    with _connect(database_path) as connection:
-        _initialize_schema(connection)
+    is_new = not Path(database_path).exists()
+    with closing(_connect_writable(database_path)) as connection, connection:
+        if is_new:
+            _initialize_schema(connection)
+            connection.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
+        connection.execute("BEGIN IMMEDIATE")
+        version = connection.execute("PRAGMA user_version").fetchone()[0]
+        if version not in (0, CURRENT_SCHEMA_VERSION):
+            raise ValueError(f"unsupported catalog schema version: {version}")
+        if not _is_legacy_v0_catalog(connection, allow_extra_tables=True):
+            raise ValueError("unsupported catalog schema")
+        if connection.execute("PRAGMA foreign_key_check").fetchall():
+            raise ValueError("catalog foreign key violations detected")
+        previous = connection.execute(
+            "SELECT payload_json FROM products WHERE product_id=? AND knowledge_base_version=?",
+            (product.product_id, product.knowledge_base_version),
+        ).fetchone()
+        if previous is not None and json.loads(previous[0]) != json.loads(product_json):
+            raise ValueError(f"product conflict: {product.product_id}")
 
         connection.execute(
             """
-            INSERT OR REPLACE INTO products (
+            INSERT INTO products (
                 product_id,
                 knowledge_base_version,
                 vin_min_v,
@@ -127,22 +156,26 @@ def save_published_catalog(
                 payload_json
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (
+                product_id,
+                knowledge_base_version
+            )
+            DO UPDATE SET
+                vin_min_v = excluded.vin_min_v,
+                vin_max_v = excluded.vin_max_v,
+                vout_min_v = excluded.vout_min_v,
+                vout_max_v = excluded.vout_max_v,
+                vout_max_vin_ratio = excluded.vout_max_vin_ratio,
+                iout_continuous_max_a = excluded.iout_continuous_max_a,
+                payload_json = excluded.payload_json
             """,
             (
                 product.product_id,
                 product.knowledge_base_version,
-                float(product.vin_min_v)
-                if product.vin_min_v is not None
-                else None,
-                float(product.vin_max_v)
-                if product.vin_max_v is not None
-                else None,
-                float(product.vout_min_v)
-                if product.vout_min_v is not None
-                else None,
-                float(product.vout_max_v)
-                if product.vout_max_v is not None
-                else None,
+                float(product.vin_min_v) if product.vin_min_v is not None else None,
+                float(product.vin_max_v) if product.vin_max_v is not None else None,
+                float(product.vout_min_v) if product.vout_min_v is not None else None,
+                float(product.vout_max_v) if product.vout_max_v is not None else None,
                 float(product.vout_max_vin_ratio)
                 if product.vout_max_vin_ratio is not None
                 else None,
@@ -153,21 +186,39 @@ def save_published_catalog(
             ),
         )
 
-        connection.execute(
-            """
-            DELETE FROM evidence
-            WHERE product_id = ?
-              AND knowledge_base_version = ?
-            """,
-            (
-                product.product_id,
-                product.knowledge_base_version,
-            ),
-        )
+        existing_evidence = {
+            row[0]: row[1]
+            for row in connection.execute(
+                """
+                SELECT evidence_id, payload_json
+                FROM evidence
+                WHERE product_id = ?
+                  AND knowledge_base_version = ?
+                """,
+                (
+                    product.product_id,
+                    product.knowledge_base_version,
+                ),
+            ).fetchall()
+        }
 
         for item in evidence_items:
+            evidence_payload = item.model_dump(
+                mode="json",
+                exclude_none=False,
+            )
+            existing_payload_json = existing_evidence.get(item.evidence_id)
+
+            if existing_payload_json is not None:
+                existing_payload = json.loads(existing_payload_json)
+
+                if existing_payload != evidence_payload:
+                    raise ValueError(f"evidence conflict: {item.evidence_id}")
+
+                continue
+
             evidence_json = json.dumps(
-                item.model_dump(mode="json", exclude_none=False),
+                evidence_payload,
                 ensure_ascii=False,
                 sort_keys=True,
             )
@@ -204,9 +255,7 @@ def load_published_catalog(
     if not path.is_file():
         raise FileNotFoundError(path)
 
-    with _connect(path) as connection:
-        _initialize_schema(connection)
-
+    with closing(_connect_readonly(path)) as connection:
         product_row = connection.execute(
             """
             SELECT payload_json
@@ -221,10 +270,7 @@ def load_published_catalog(
         ).fetchone()
 
         if product_row is None:
-            raise KeyError(
-                f"published product not found: "
-                f"{product_id}@{knowledge_base_version}"
-            )
+            raise KeyError(f"published product not found: {product_id}@{knowledge_base_version}")
 
         evidence_rows = connection.execute(
             """
@@ -240,16 +286,12 @@ def load_published_catalog(
             ),
         ).fetchall()
 
-    product = BuckProductRecord.model_validate(
-        json.loads(product_row[0])
-    )
+    product = BuckProductRecord.model_validate(json.loads(product_row[0]))
 
-    evidence = tuple(
-        EvidenceRef.model_validate(json.loads(row[0]))
-        for row in evidence_rows
-    )
+    evidence = tuple(EvidenceRef.model_validate(json.loads(row[0])) for row in evidence_rows)
 
     return product, evidence
+
 
 def find_published_candidates(
     *,
@@ -267,9 +309,7 @@ def find_published_candidates(
     if not path.is_file():
         raise FileNotFoundError(path)
 
-    with _connect(path) as connection:
-        _initialize_schema(connection)
-
+    with closing(_connect_readonly(path)) as connection:
         rows = connection.execute(
             """
             SELECT payload_json
@@ -309,12 +349,8 @@ def find_published_candidates(
             ),
         ).fetchall()
 
-    return tuple(
-        BuckProductRecord.model_validate(
-            json.loads(row[0])
-        )
-        for row in rows
-    )
+    return tuple(BuckProductRecord.model_validate(json.loads(row[0])) for row in rows)
+
 
 def list_published_products(
     *,
@@ -328,9 +364,7 @@ def list_published_products(
     if not path.is_file():
         raise FileNotFoundError(path)
 
-    with _connect(path) as connection:
-        _initialize_schema(connection)
-
+    with closing(_connect_readonly(path)) as connection:
         rows = connection.execute(
             """
             SELECT payload_json
@@ -341,9 +375,4 @@ def list_published_products(
             (knowledge_base_version,),
         ).fetchall()
 
-    return tuple(
-        BuckProductRecord.model_validate(
-            json.loads(row[0])
-        )
-        for row in rows
-    )
+    return tuple(BuckProductRecord.model_validate(json.loads(row[0])) for row in rows)

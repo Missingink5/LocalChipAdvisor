@@ -21,6 +21,9 @@ dependencies = [
   "uvicorn[standard]>=0.35,<1",
 ]
 
+[project.scripts]
+local-chip-advisor = "local_chip_advisor.cli:cli_entrypoint"
+
 [project.optional-dependencies]
 dev = [
   "mypy>=1.17,<2",

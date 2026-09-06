@@ -373,3 +373,16 @@ def test_peak_output_current_uses_continuous_rating_when_it_is_sufficient() -> N
     assert result.field_name == "iout.continuous"
     assert result.state is CheckState.PASS
     assert result.evidence_ids == ("ev:continuous",)
+
+
+def test_output_tolerance_rule_api_exists() -> None:
+    from importlib import import_module
+
+    rules = import_module(
+        "local_chip_advisor.domain.product_rules"
+    )
+
+    assert hasattr(
+        rules,
+        "check_output_tolerance",
+    )

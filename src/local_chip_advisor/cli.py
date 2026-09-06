@@ -34,7 +34,7 @@ def format_requirement_review(
 
 
 def format_recommendation_result(result) -> str:
-    """Format recommendation buckets and candidate issues for terminal display."""
+    """Format recommendation buckets and deterministic check results."""
 
     lines: list[str] = []
 
@@ -50,6 +50,23 @@ def format_recommendation_result(result) -> str:
             continue
 
         lines.append(f"{bucket_name}:")
+
+        if bucket_name == "formal":
+            for item in candidates:
+                lines.append(
+                    f"- {item.candidate.product_id}"
+                )
+
+                for check in item.candidate.evaluation.checks:
+                    lines.append(
+                        "  "
+                        f"{check.rule_id} | "
+                        f"{check.state} | "
+                        f"{check.requirement} | "
+                        f"{check.reason}"
+                    )
+
+            continue
 
         for candidate in candidates:
             lines.append(f"- {candidate.product_id}")
