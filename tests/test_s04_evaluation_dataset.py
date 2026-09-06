@@ -34,13 +34,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
+
+import pymupdf
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EVAL_DIR = REPO_ROOT / "evaluations"
 CASES_DIR = EVAL_DIR / "cases"
 MANIFEST_PATH = EVAL_DIR / "corpus_manifest.json"
 DATASET_MANIFEST_PATH = CASES_DIR / "dataset_manifest.json"
+SEMANTIC_SCOPE_REVIEW_PATH = CASES_DIR / "semantic_scope_review.json"
 
 CASE_FILES = {
     "dev": CASES_DIR / "dev.jsonl",
@@ -99,6 +103,65 @@ FIRST_TEN_DEV_GROUP_IDS = (
     "tps562201.soft_start.01",
     "lt8610.quiescent.01",
     "tps54331.thermal_shutdown.01",
+)
+
+NO_CHANGE_SCOPE_GROUP_IDS = frozenset(
+    {
+        "lt8610.frequency.01",
+        "mp4570.output_set.01",
+        "mp4570.power_good.01",
+        "mp4570.uvlo.01",
+        "tps54331.frequency.01",
+        "tps54331.vout_set.01",
+        "tps562201.ocl.01",
+        "tps562201.uvlo.01",
+        "tps562201.uvp.01",
+    }
+)
+CORRECTED_SCOPE_GROUP_IDS = frozenset(
+    {
+        "lt8610.burst.01",
+        "lt8610.en_uv.01",
+        "lt8610.foldback.01",
+        "lt8610.ilim.01",
+        "lt8610.pg.01",
+        "lt8610.quiescent.01",
+        "lt8610.sync.01",
+        "lt8610.thermal_resistance.01",
+        "lt8610.trss.01",
+        "mp4570.bias.01",
+        "mp4570.bootstrap.01",
+        "mp4570.en_zener.01",
+        "mp4570.input_range.01",
+        "mp4570.light_load.01",
+        "mp4570.ocp.01",
+        "mp4570.output_range.01",
+        "mp4570.ovp.01",
+        "mp4570.soft_start.01",
+        "mp4570.sync.01",
+        "mp4570.thermal_resistance.01",
+        "mp4570.thermal_shutdown.01",
+        "tps54331.boot.01",
+        "tps54331.emc.01",
+        "tps54331.en.01",
+        "tps54331.iq.01",
+        "tps54331.layout.01",
+        "tps54331.light_load.01",
+        "tps54331.ocp.01",
+        "tps54331.ovtp.01",
+        "tps54331.soft_start.01",
+        "tps54331.thermal_shutdown.01",
+        "tps54331.vref.01",
+        "tps562201.eco.01",
+        "tps562201.eco_fccm.01",
+        "tps562201.frequency.01",
+        "tps562201.input_range.01",
+        "tps562201.layout.01",
+        "tps562201.shutdown_current.01",
+        "tps562201.soft_start.01",
+        "tps562201.tsd.01",
+        "tps562201.vfb_accuracy.01",
+    }
 )
 
 
@@ -182,6 +245,15 @@ def _read_dataset_manifest() -> dict[str, object] | None:
     return obj
 
 
+def _normalize_pdf_verbatim(text: str) -> str:
+    """Normalize only the documented PDF soft-hyphen extraction artifact."""
+
+    text = re.sub("\u00ad[ \t]*\r?\n[ \t]*", "", text)
+    text = text.replace("\u00ad", "")
+    lines = (line.strip() for line in text.splitlines())
+    return " ".join(line for line in lines if line)
+
+
 # ---------------------------------------------------------------- files
 
 
@@ -258,6 +330,58 @@ def test_s04_gold_spans_contract() -> None:
         assert isinstance(span["section"], str) and span["section"]
         assert isinstance(span["required_qualifiers"], list)
         assert span["human_reviewed"] is False, f"{span_id}: human_reviewed must be false"
+
+
+def test_s04_gold_spans_are_verbatim_on_declared_physical_pages() -> None:
+    """Every gold quote must occur within its declared physical PDF pages."""
+
+    manifest = _read_manifest()
+    sources = _documents(manifest)
+    spans = _read_jsonl(SPAN_FILE)
+    open_documents: dict[str, pymupdf.Document] = {}
+    page_text_cache: dict[tuple[str, int], str] = {}
+
+    try:
+        for source_id, source in sources.items():
+            local_file = source.get("local_file")
+            expected_pages = source.get("pdf_pages")
+            assert isinstance(local_file, str) and local_file
+            assert isinstance(expected_pages, int)
+            document = pymupdf.open(REPO_ROOT / local_file)
+            open_documents[source_id] = document
+            assert document.page_count == expected_pages, (
+                f"{source_id}: PDF page_count={document.page_count}, "
+                f"manifest pdf_pages={expected_pages}"
+            )
+
+        for span in spans:
+            span_id = span["span_id"]
+            source_id = span["source_id"]
+            start = span["pdf_page_start"]
+            end = span["pdf_page_end"]
+            needle = span["verbatim_text"]
+            assert isinstance(span_id, str)
+            assert isinstance(source_id, str)
+            assert isinstance(start, int) and isinstance(end, int)
+            assert isinstance(needle, str)
+
+            document = open_documents[source_id]
+            declared_page_text: list[str] = []
+            for physical_page in range(start, end + 1):
+                cache_key = (source_id, physical_page)
+                if cache_key not in page_text_cache:
+                    page_text_cache[cache_key] = document[physical_page - 1].get_text()
+                declared_page_text.append(page_text_cache[cache_key])
+
+            haystack = _normalize_pdf_verbatim("\n".join(declared_page_text))
+            normalized_needle = _normalize_pdf_verbatim(needle)
+            assert normalized_needle in haystack, (
+                f"{span_id}: verbatim text not found in {source_id} "
+                f"physical pages {start}..{end}"
+            )
+    finally:
+        for document in open_documents.values():
+            document.close()
 
 
 # ---------------------------------------------------------------- cases
@@ -348,6 +472,52 @@ def test_s04_normal_groups_have_all_four_language_expressions() -> None:
             groups.setdefault(case["semantic_group_id"], set()).add(case["language_group"])
         for gid, langs in groups.items():
             assert langs == LANGUAGE_GROUPS, f"{gid}: incomplete language expressions"
+
+
+def test_s04_semantic_scope_technical_pre_review_inventory() -> None:
+    """Technical scope review covers every normal group without human approval."""
+
+    assert SEMANTIC_SCOPE_REVIEW_PATH.is_file(), "semantic scope review missing"
+    review = json.loads(SEMANTIC_SCOPE_REVIEW_PATH.read_text(encoding="utf-8"))
+    assert review["review_kind"] == "technical_pre_review"
+    assert review["human_reviewed"] is False
+    entries = review["groups"]
+    assert isinstance(entries, list)
+    assert all(
+        set(entry)
+        == {"semantic_group_id", "disposition", "scope_summary", "human_reviewed"}
+        for entry in entries
+    )
+    ids = [entry["semantic_group_id"] for entry in entries]
+    assert len(ids) == len(set(ids)), "duplicate semantic scope review group"
+
+    _, _, cases = _load_all()
+    normal_group_ids = {
+        case["semantic_group_id"]
+        for name in ("dev", "holdout")
+        for case in cases[name]
+    }
+    assert set(ids) == normal_group_ids
+    assert CORRECTED_SCOPE_GROUP_IDS.isdisjoint(NO_CHANGE_SCOPE_GROUP_IDS)
+    assert CORRECTED_SCOPE_GROUP_IDS | NO_CHANGE_SCOPE_GROUP_IDS == normal_group_ids
+
+    disposition_by_id = {
+        entry["semantic_group_id"]: entry["disposition"]
+        for entry in entries
+    }
+    assert set(disposition_by_id.values()) <= {"corrected", "no_change"}
+    assert {
+        group_id
+        for group_id, disposition in disposition_by_id.items()
+        if disposition == "corrected"
+    } == CORRECTED_SCOPE_GROUP_IDS
+    assert {
+        group_id
+        for group_id, disposition in disposition_by_id.items()
+        if disposition == "no_change"
+    } == NO_CHANGE_SCOPE_GROUP_IDS
+    assert all(entry["scope_summary"].strip() for entry in entries)
+    assert all(entry["human_reviewed"] is False for entry in entries)
 
 
 def test_s04_first_ten_groups_stay_dev_forever() -> None:

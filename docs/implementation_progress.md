@@ -658,3 +658,53 @@ S04 交付内容（全部为新增文件，未改动任何既有代码/数据）
 - **S05 未开始**：未建 knowledge.sqlite3、未做形式化分块、未装/运行
   Chroma、未调 Ollama/Embedding、未做任何检索/问答接线。
 
+
+## S03 复核修订 + S04 复核修订（2026-09-06，独立复核后同日完成）
+
+独立复核（用户提供的外部复核报告）指出：S03 仍有工况适用性缺口、S04 有
+1 条 span 页码错误且多组四种问法语义不等价。本节记录针对性的修订。
+
+### S03 修订（保守化 UNKNOWN-first + 行为级覆盖）
+
+- `check_continuous_output_current`：请求电流未超额定数值不再 PASS——冷却、
+  环境、VIN、PCB、负载、功耗适用性未结构化且无证据绑定时一律 UNKNOWN；
+  超限仍 FAIL（数值上限仍可拒绝）。
+- `check_peak_output_current`：连续 fallback 与显式峰值路径同理：数值内
+  UNKNOWN，超限 FAIL；UNKNOWN 不再挂 evidence_ids（不再暗示证据已证明）。
+- `check_ambient_thermal`：cooling regime 相容且数值内不再 PASS——PCB/
+  heatsink/负载/功耗未结构化时 UNKNOWN；用户 regime 下明确超额定仍 FAIL。
+- `REQUIREMENT_FIELD_COVERAGE` 重构为三分类：`QUALIFICATION_INPUT_RULES`
+  （实际影响判定）、`CONTEXT_CLARIFICATION_FIELDS`（raw_request/
+  vin_nominal_v/thermal_conditions，追溯与澄清用）、`PROCESS_METADATA_FIELDS`
+  （confirmed_by_user），结构漂移守卫不变。
+- `tests/test_screening_coverage.py` 由声明级升级为行为级：逐字段
+  fingerprint 用例（改变该字段必须改变对应规则的结果），并覆盖
+  "thermal_conditions 改变不影响判定"（上下文字段不得成为决策输入）。
+
+### S04 修订（页码 + 组内问法等价 + 页级校验入库）
+
+- `tps54331.soft_start.01.s1` 页码 10 → 11（独立 PyMuPDF 按页回查命中）；
+- validator 新增 `test_s04_gold_spans_are_verbatim_on_declared_physical_pages`：
+  79 条 span 的 verbatim_text 必须在**声明页**内逐字命中（pymupdf 直读
+  PDF，软连字符伪影规范化后匹配），79/79 页级命中；
+- 41 个语义组（104 条 case）的 query 语义对齐：同组四种表达统一询问同一
+  范围（触发+恢复阈值成对、完整输入范围、基准精度≠输出精度、开关限流≠
+  输出能力、待机电流≠关断电流、定性 EMI 措施≠性能评价等）；仅修改
+  `query` 字段，其余字段经脚本断言逐字节不变；9 组维持原样；
+- 新增 `evaluations/cases/semantic_scope_review.json`：技术预审清单
+  （review_kind=technical_pre_review，human_reviewed=false，50 组全覆盖，
+  corrected 41 / no_change 9，每组一条统一问题范围），validator 强制
+  清单与数据集组集合精确一致。
+
+### 复验结果
+
+| 检查 | 结果 |
+|---|---|
+| 全量 pytest | **242 passed in 2.26s** |
+| S04 定向 pytest | 11 passed（含页级 verbatim 与 scope-review 门禁） |
+| ruff src+tests | 76 条，与 S03 基线逐文件一致，修订文件 0 新增 |
+| git diff --check | 通过 |
+
+状态表述不变：**S03 修订完成待验收；S04 TECHNICAL DATASET COMPLETE /
+HUMAN REVIEW PENDING / S04 NOT YET FULLY ACCEPTED / S05 NOT STARTED**。
+human_reviewed 与 holdout_sealed 仍全部 false，等待人工验收。
