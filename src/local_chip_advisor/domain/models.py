@@ -58,6 +58,20 @@ class SurgeKnowledge(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class ThermalCoolingMode(StrEnum):
+    """Structured operating cooling regime used for thermal qualification.
+
+    Natural convection is the harder (worse) cooling regime: a rating
+    characterized under natural convection also covers forced-airflow
+    operation, while a forced-airflow rating does not prove natural
+    convection. Free text such as PCB or heatsink context is never a
+    substitute for this structured applicability.
+    """
+
+    NATURAL_CONVECTION = "NATURAL_CONVECTION"
+    FORCED_AIRFLOW = "FORCED_AIRFLOW"
+
+
 class RequirementCard(FrozenModel):
     """Normalized requirements that must be confirmed before formal screening."""
 
@@ -75,6 +89,10 @@ class RequirementCard(FrozenModel):
     peak_duration_ms: Decimal | None = Field(default=None, gt=0)
     ambient_max_c: Decimal | None = None
     thermal_conditions: str | None = None
+    # Structured operating cooling regime. None means the user has not
+    # characterized the cooling condition; a numeric ambient PASS is not
+    # reachable until it is stated (free text never proves the regime).
+    cooling_method: ThermalCoolingMode | None = None
     confirmed_by_user: bool = False
 
     def missing_minimum_fields(self) -> tuple[str, ...]:

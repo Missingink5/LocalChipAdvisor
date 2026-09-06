@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from pydantic import Field, model_validator
 
-from .models import FrozenModel, PublicationStatus
+from .models import FrozenModel, PublicationStatus, ThermalCoolingMode
 
 
 class BuckProductRecord(FrozenModel):
@@ -40,6 +40,18 @@ class BuckProductRecord(FrozenModel):
         le=1,
     )
     iout_continuous_max_a: Decimal | None = Field(default=None, gt=0)
+    # Structured regime under which iout_continuous_max_a was characterized.
+    # None means the rating's applicability conditions are not structurally
+    # stated; such a rating cannot prove a peak-load fallback for any user
+    # regime (rating magnitude alone must not be generalized).
+    iout_continuous_cooling_method: ThermalCoolingMode | None = None
+    # Highest ambient temperature under which iout_continuous_max_a is
+    # declared valid (derating/applicability upper bound). None means the
+    # rating's temperature applicability is not structurally stated.
+    iout_continuous_ambient_max_c: Decimal | None = Field(
+        default=None,
+        gt=0,
+    )
     iout_peak_max_a: Decimal | None = Field(default=None, gt=0)
     iout_peak_duration_max_ms: Decimal | None = Field(default=None, gt=0)
 
@@ -56,6 +68,10 @@ class BuckProductRecord(FrozenModel):
 
     # Thermal / package
     ambient_temp_max_c: Decimal | None = None
+    # Structured regime under which ambient_temp_max_c was characterized.
+    # None means the rating's applicability conditions are not structurally
+    # stated; such a rating cannot decisively qualify any user regime.
+    ambient_cooling_method: ThermalCoolingMode | None = None
     junction_temp_min_c: Decimal | None = None
     junction_temp_max_c: Decimal | None = None
     package: str | None = None

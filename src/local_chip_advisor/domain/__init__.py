@@ -11,6 +11,7 @@ from .models import (
     PublicationStatus,
     RequirementCard,
     SurgeKnowledge,
+    ThermalCoolingMode,
 )
 from .product import BuckProductRecord
 
@@ -26,6 +27,7 @@ __all__ = [
     "PublicationStatus",
     "RequirementCard",
     "SurgeKnowledge",
+    "ThermalCoolingMode",
     "classify_candidate",
     "validate_evidence_bindings",
 ]

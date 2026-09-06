@@ -4,6 +4,10 @@ from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
+from test_publication_gate import publishable_draft, reviewed_evidence
+from test_ranking import formal_candidate
+from test_screening import confirmed_requirements
+
 from local_chip_advisor.catalog.publication import prepare_published_product
 from local_chip_advisor.catalog.sqlite_store import save_published_catalog
 from local_chip_advisor.ranking import (
@@ -19,9 +23,6 @@ from local_chip_advisor.screening import (
     CatalogScreeningResult,
     ScreenedCandidate,
 )
-from test_publication_gate import publishable_draft, reviewed_evidence
-from test_ranking import formal_candidate
-from test_screening import confirmed_requirements
 
 
 def formal_candidate_with_evidence(
@@ -198,9 +199,37 @@ def test_candidate_issues_exposes_unknown_verification_reason(
     candidate = result.needs_verification[0]
     issues = candidate_issues(candidate)
 
-    assert len(issues) == 1
+    # Every UNKNOWN rule must surface: the tolerance rule has no structured
+    # total-error capability, the peak fallback has no stated rating regime,
+    # and the fixture has no explicit ambient operating rating.
+    issues_by_rule = {
+        issue.rule_id: issue
+        for issue in issues
+    }
 
-    issue = issues[0]
+    assert set(issues_by_rule) == {
+        "vout.tolerance",
+        "iout.peak",
+        "thermal.ambient",
+    }
+
+    tolerance_issue = issues_by_rule["vout.tolerance"]
+
+    assert tolerance_issue.state.value == "UNKNOWN"
+    assert tolerance_issue.requirement.startswith(
+        "output-voltage tolerance within ±2%"
+    )
+    assert tolerance_issue.actual is None
+    assert "no structured total output-voltage error" in tolerance_issue.reason
+    assert tolerance_issue.evidence == ()
+
+    peak_issue = issues_by_rule["iout.peak"]
+
+    assert peak_issue.state.value == "UNKNOWN"
+    assert "cooling regime" in peak_issue.reason
+    assert peak_issue.evidence == ()
+
+    issue = issues_by_rule["thermal.ambient"]
 
     assert issue.rule_id == "thermal.ambient"
     assert issue.state.value == "UNKNOWN"
@@ -240,6 +269,17 @@ def test_recommendation_result_embeds_issues_for_verification_candidate(
     item = result.needs_verification[0]
 
     assert item.candidate.product_id == "MPS-MP4570"
-    assert len(item.issues) == 1
-    assert item.issues[0].rule_id == "thermal.ambient"
-    assert item.issues[0].state.value == "UNKNOWN"
+
+    issues_by_rule = {
+        issue.rule_id: issue
+        for issue in item.issues
+    }
+
+    assert set(issues_by_rule) == {
+        "vout.tolerance",
+        "iout.peak",
+        "thermal.ambient",
+    }
+    assert issues_by_rule["vout.tolerance"].state.value == "UNKNOWN"
+    assert issues_by_rule["iout.peak"].state.value == "UNKNOWN"
+    assert issues_by_rule["thermal.ambient"].state.value == "UNKNOWN"

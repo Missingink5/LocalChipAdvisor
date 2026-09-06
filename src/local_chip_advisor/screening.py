@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,9 +24,44 @@ from local_chip_advisor.domain.product_rules import (
     check_continuous_output_current,
     check_input_surge,
     check_input_voltage,
+    check_output_tolerance,
     check_output_voltage,
     check_peak_output_current,
 )
+
+#: Inventory of what screening does with every RequirementCard field.
+#:
+#: Fields mapped to rule IDs are inputs to those deterministic checks (the
+#: surge fields only feed ``surge.input`` when a surge is declared PRESENT).
+#: Fields mapped to ``()`` are intentional context/process-only inputs. The
+#: guard in ``tests/test_screening_coverage.py`` requires the declared keys to
+#: equal ``RequirementCard.model_fields`` and the declared rule IDs to equal
+#: ``DEFAULT_REQUIRED_RULE_IDS``, so a requirement field added later can never
+#: be collected but silently consumed by no rule.
+REQUIREMENT_FIELD_COVERAGE: Mapping[str, tuple[str, ...]] = {
+    "raw_request": (),  # original request text, kept for traceability
+    "vin_min_v": ("vin.range",),
+    "vin_nominal_v": (),  # nominal operating point; rules use the min/max bounds
+    "vin_max_v": ("vin.range",),
+    "surge_knowledge": ("surge.input",),
+    "surge_voltage_v": ("surge.input",),  # only when surge_knowledge is PRESENT
+    "surge_duration_ms": ("surge.input",),  # only when surge_knowledge is PRESENT
+    "vout_target_v": ("vout.range",),
+    "vout_tolerance_percent": ("vout.tolerance",),
+    "iout_continuous_a": ("iout.continuous",),
+    "iout_peak_a": ("iout.peak",),
+    "peak_duration_ms": ("iout.peak",),
+    "ambient_max_c": ("thermal.ambient", "iout.peak"),
+    "cooling_method": (
+        "thermal.ambient",
+        # regime gate for the continuous-rating peak fallback
+        "iout.peak",
+    ),
+    # Free-text thermal context (PCB/heatsink notes) is kept for traceability;
+    # it is never the decision input for thermal.ambient.
+    "thermal_conditions": (),
+    "confirmed_by_user": (),  # process gate enforced in evaluate_candidate
+}
 
 
 def evaluate_candidate(
@@ -53,12 +88,12 @@ def evaluate_candidate(
     assert requirements.vin_min_v is not None
     assert requirements.vin_max_v is not None
     assert requirements.vout_target_v is not None
+    assert requirements.vout_tolerance_percent is not None
     assert requirements.iout_continuous_a is not None
     assert requirements.iout_peak_a is not None
     assert requirements.peak_duration_ms is not None
     assert requirements.surge_knowledge is not None
     assert requirements.ambient_max_c is not None
-    assert requirements.thermal_conditions is not None
 
     checks = (
         check_input_voltage(
@@ -71,6 +106,10 @@ def evaluate_candidate(
             requested_vout_v=requirements.vout_target_v,
             operating_vin_min_v=requirements.vin_min_v,
         ),
+        check_output_tolerance(
+            product=product,
+            requested_tolerance_percent=requirements.vout_tolerance_percent,
+        ),
         check_continuous_output_current(
             product=product,
             requested_iout_a=requirements.iout_continuous_a,
@@ -79,6 +118,8 @@ def evaluate_candidate(
             product=product,
             requested_iout_peak_a=requirements.iout_peak_a,
             requested_peak_duration_ms=requirements.peak_duration_ms,
+            requested_cooling_method=requirements.cooling_method,
+            requested_ambient_max_c=requirements.ambient_max_c,
         ),
         check_input_surge(
             product=product,
@@ -89,7 +130,7 @@ def evaluate_candidate(
         check_ambient_thermal(
             product=product,
             ambient_max_c=requirements.ambient_max_c,
-            thermal_conditions=requirements.thermal_conditions,
+            cooling_method=requirements.cooling_method,
         ),
     )
 

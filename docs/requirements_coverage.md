@@ -1,11 +1,14 @@
 # Requirements Coverage Matrix
 
-Status: S03 baseline derived from the current RequirementCard, product model,
-screening entry points, rule implementations, and DEFAULT_REQUIRED_RULE_IDS.
+Status: **S03 complete (2026-09-06)**. This matrix now records post-S03
+behavior: the output-tolerance rule is wired UNKNOWN-first, thermal and
+peak-fallback qualification use structured cooling-regime matching, and
+requirement-field-to-rule coverage is machine-enforced. The pre-S03 frozen
+baseline version of this document is preserved in git history (commit
+`02df2a9`, "WIP: complete S02 and start S03 rule coverage").
 
-This document records current behavior before S03 rule changes. It does not
-claim that an existing rule is sufficient merely because a requirement field
-is passed into a function.
+This document does not claim that an existing rule is sufficient merely
+because a requirement field is passed into a function.
 
 ## 1. Formal qualification rule set
 
@@ -15,12 +18,11 @@ Current DEFAULT_REQUIRED_RULE_IDS:
 |---|---|
 | `vin.range` | Recommended operating input-voltage range |
 | `vout.range` | Output-voltage operating range at minimum VIN |
+| `vout.tolerance` | Output-voltage tolerance requirement; UNKNOWN-first until a structured worst-case total-error capability exists |
 | `iout.continuous` | Continuous output-current rating |
-| `iout.peak` | Peak current and duration, with continuous-rating fallback |
+| `iout.peak` | Peak current and duration, with continuous-rating fallback gated by cooling regime and ambient |
 | `surge.input` | Input-surge knowledge / current transient-model boundary |
-| `thermal.ambient` | Ambient-temperature rating |
-
-Current formal rule set has no output-tolerance rule.
+| `thermal.ambient` | Ambient-temperature rating with structural cooling-regime applicability matching |
 
 ## 2. Requirement coverage matrix
 
@@ -34,12 +36,13 @@ Current formal rule set has no output-tolerance rule.
 | `surge_voltage_v` | V | Hard transient requirement when surge is PRESENT | `surge.input` | No qualifying transient product field | No qualifying transient evidence model | Collected and displayed; PRESENT remains UNKNOWN | Cannot infer transient PASS from Absolute Maximum VIN | `UNKNOWN` |
 | `surge_duration_ms` | ms | Hard transient requirement when surge is PRESENT | `surge.input` | No qualifying transient product field | No qualifying transient evidence model | Collected and displayed; PRESENT remains UNKNOWN | Waveform, repetition, protection and operating conditions are not modeled | `UNKNOWN` |
 | `vout_target_v` | V | Hard operating requirement | `vout.range` | `vout_min_v`, `vout_max_v`, `vout_max_vin_ratio` | Evidence for lower and applicable upper bounds | PASS/FAIL/UNKNOWN at requested minimum VIN | Voltage range does not prove output accuracy | Existing rule state |
-| `vout_tolerance_percent` | % | Hard output-accuracy requirement | **No rule currently consumes this field** | No structured total-output-error capability | No structured accuracy evidence | Required for confirmation but absent from screening checks | A formal candidate can currently ignore requested tolerance | **Must become `UNKNOWN` until a dedicated rule and decisive evidence exist** |
+| `vout_tolerance_percent` | % | Hard output-accuracy requirement | `vout.tolerance` (emitted by screening since S03) | None: no structured total-output-error capability; feedback-reference accuracy is not treated as total accuracy | No structured accuracy evidence | Always UNKNOWN with a deterministic reason; never inferred from the `vout.range` PASS | Worst-case total output error is not calculated from error sources | `UNKNOWN` |
 | `iout_continuous_a` | A | Hard load requirement | `iout.continuous` | `iout_continuous_max_a` | Evidence for continuous-current rating | PASS/FAIL/UNKNOWN | Rating applicability conditions are not structured in the current product model | Existing rule is usable only within supported evidence applicability; unresolved conditions must not be generalized |
-| `iout_peak_a` | A | Hard peak-load requirement | `iout.peak` | `iout_peak_max_a`, `iout_peak_duration_max_ms`; or continuous-current fallback | Peak-current and duration evidence; or continuous-current evidence for fallback | PASS/FAIL/UNKNOWN | Continuous-rating fallback currently ignores voltage, temperature, PCB, airflow and similar applicability conditions | **Must not PASS via fallback when applicable operating conditions are unproven** |
+| `iout_peak_a` | A | Hard peak-load requirement | `iout.peak` | `iout_peak_max_a`, `iout_peak_duration_max_ms`; or continuous-current fallback | Peak-current and duration evidence; or continuous-current evidence for fallback | Explicit peak path PASS/FAIL/UNKNOWN; fallback PASS only when the rating regime is stated and matches the requested regime | Continuous-rating fallback cannot generalize to an unstated or mismatched cooling regime | `UNKNOWN` when fallback applicability is not established |
 | `peak_duration_ms` | ms | Hard peak-duration requirement | `iout.peak` | `iout_peak_duration_max_ms`; ignored when continuous-current fallback is used | Duration evidence for explicit peak rating | Explicit peak path compares duration | Continuous fallback treats continuous rating as stronger, but does not prove that its conditions match the requested operating point | `UNKNOWN` when fallback applicability is not established |
-| `ambient_max_c` | degC | Hard thermal requirement | `thermal.ambient` | `ambient_temp_max_c` | Evidence for explicit ambient-temperature rating | PASS/FAIL/UNKNOWN from numeric ambient rating | Numeric ambient rating alone does not prove requested cooling / PCB / load conditions | Must not be formal when thermal applicability is unproven |
-| `thermal_conditions` | text today | Hard applicability condition | Passed to `thermal.ambient`, but **not structurally matched** | No structured cooling / PCB / airflow / power applicability fields | Only ambient-temperature evidence is currently used | Text is included in the requirement description; it does not affect PASS/FAIL | Natural convection, forced airflow, PCB construction, heatsinking and load conditions are not compared structurally | **`UNKNOWN` until required thermal conditions are structurally compatible with evidence conditions** |
+| `ambient_max_c` | degC | Hard thermal requirement | `thermal.ambient` | `ambient_temp_max_c`; `ambient_cooling_method` (rating regime) | Evidence for explicit ambient-temperature rating | Numeric PASS only when the rating regime is stated and structurally covers the requested regime | A numeric rating alone does not prove the requested cooling regime | `UNKNOWN` when the user regime or the rating regime is unstated, or regimes are incompatible |
+| `cooling_method` | `NATURAL_CONVECTION` / `FORCED_AIRFLOW` / null | Structural applicability condition (S03) | `thermal.ambient`; regime gate for the `iout.peak` continuous-rating fallback | `ambient_cooling_method`, `iout_continuous_cooling_method` | Same evidence as the consuming numeric rule | Natural-convection rating covers natural-convection and (at equal or lower numbers) forced-airflow requests; forced-airflow rating qualifies forced-airflow requests only | Unstated user regime or unstated rating regime cannot be extended to any regime | `UNKNOWN` |
+| `thermal_conditions` | text today | Context / process-only (S03) | Explicitly declared context-only in `REQUIREMENT_FIELD_COVERAGE`; replaced by the structured `cooling_method` field | None | None | Preserved for traceability; does not affect PASS/FAIL | Free text must not become the decision input for thermal qualification | N/A (structurally covered by `cooling_method`) |
 | `confirmed_by_user` | boolean | Process gate, not a product capability | `evaluate_candidate` precondition | None | None | Screening is rejected unless requirements are confirmed | Must remain separate from engineering qualification | Gate failure, not rule PASS/FAIL |
 
 ## 3. Current rule-to-field consumption
@@ -50,70 +53,79 @@ Current formal rule set has no output-tolerance rule.
 | Screening confirmation gate | `confirmed_by_user` |
 | `vin.range` | `vin_min_v`, `vin_max_v` |
 | `vout.range` | `vout_target_v`, `vin_min_v` |
+| `vout.tolerance` | `vout_tolerance_percent` |
 | `iout.continuous` | `iout_continuous_a` |
-| `iout.peak` | `iout_peak_a`, `peak_duration_ms` |
+| `iout.peak` | `iout_peak_a`, `peak_duration_ms`, `cooling_method` (fallback regime gate), `ambient_max_c` (fallback ambient gate) |
 | `surge.input` | `surge_knowledge`, `surge_voltage_v`, `surge_duration_ms` |
-| `thermal.ambient` | `ambient_max_c`, `thermal_conditions` |
-| **No hard rule** | **`vout_tolerance_percent`** |
+| `thermal.ambient` | `ambient_max_c`, `cooling_method` |
+| No hard rule | none: every requirement field has a declared disposition in `REQUIREMENT_FIELD_COVERAGE` |
 
 Passing a field into a function is not by itself proof that the field affects
-qualification. In particular, `thermal_conditions` is currently rendered into
-text but does not participate in structural compatibility checking.
+qualification. Since S03 the declared dispositions are machine-enforced: every
+`RequirementCard` field name and every referenced rule ID must appear in
+`REQUIREMENT_FIELD_COVERAGE` (`src/local_chip_advisor/screening.py`) and the
+guard test `tests/test_screening_coverage.py` fails when a collected
+requirement field is silently consumed by no rule.
 
-## 4. S03 gaps to close
+## 4. S03 gap resolutions
 
-### G03-1: Output tolerance
+### G03-1: Output tolerance — resolved
 
-Add a dedicated rule entry point for `vout_tolerance_percent`.
+`vout_tolerance_percent` now has a dedicated rule entry point,
+`check_output_tolerance`, emitted by screening and listed in
+`DEFAULT_REQUIRED_RULE_IDS` (7 rules). Safety behavior implemented and locked:
 
-First-version safety behavior:
-
-- missing structured product accuracy capability -> UNKNOWN;
-- missing decisive reviewed evidence -> UNKNOWN;
+- no structured product total-output-error capability -> UNKNOWN;
+- no decisive reviewed accuracy evidence -> UNKNOWN;
 - output-voltage range evidence alone cannot satisfy the rule;
 - feedback-reference accuracy alone cannot be treated as total output accuracy;
-- if total error is later calculated, every error source, worst-case combination
-  rule, operating condition and evidence binding must be explicit.
+- the rule is UNKNOWN-only: no present capability ever yields PASS, so a
+  formal candidate can no longer ignore the requested tolerance.
 
-The new rule must be added to `DEFAULT_REQUIRED_RULE_IDS` at the same time that
-screening begins emitting it.
+Regression coverage: unit tests in `tests/test_product_rules.py`,
+screening-level binding tests in `tests/test_screening.py`, and issue
+surfacing tests in `tests/test_recommendation.py`.
 
-### G03-2: Thermal applicability
+### G03-2: Thermal applicability — resolved
 
-`thermal_conditions` must no longer be decorative text in a rule that can PASS.
+`thermal_conditions` is no longer a decision input that a PASS could ignore.
+S03 introduced a structured cooling regime:
 
-A future structural representation must distinguish applicable conditions such
-as:
+- `ThermalCoolingMode` (`NATURAL_CONVECTION` / `FORCED_AIRFLOW`) on the
+  requirement card (`RequirementCard.cooling_method`) and on the product
+  record (`ambient_cooling_method`);
+- `check_ambient_thermal` now requires a matched regime: a natural-convection
+  rating covers natural-convection requests and, at equal or lower numbers,
+  forced-airflow requests; a forced-airflow rating qualifies forced-airflow
+  requests only; an unstated user regime or unstated rating regime yields
+  UNKNOWN — a numeric ambient rating alone cannot PASS and FAIL never crosses
+  regimes;
+- `thermal_conditions` free text is declared context/process-only and is kept
+  for traceability.
 
-- natural convection versus forced airflow;
-- PCB construction / copper area;
-- heatsinking;
-- load or power dissipation conditions;
-- other source-stated thermal assumptions.
+### G03-3: Peak-current applicability — resolved
 
-An ambient-temperature number may PASS only when the decisive evidence is
-applicable to the requested thermal conditions. Missing applicability data must
-produce UNKNOWN.
+The continuous-current fallback inside `check_peak_output_current` no longer
+grants PASS by rating magnitude alone. It now requires:
 
-### G03-3: Peak-current applicability
+- the requested cooling regime (`cooling_method`) and the rating regime
+  (`iout_continuous_cooling_method`); unstated regime on either side, or a
+  forced-airflow rating facing a natural-convection request, yields UNKNOWN;
+- within a matched regime, the requested ambient temperature
+  (`requested_ambient_max_c`) must not exceed the rating's stated ambient.
 
-The explicit peak-current path already requires current and duration.
+The explicit peak path still requires current and duration evidence.
 
-The continuous-current fallback is not sufficient by rating magnitude alone.
-Before it can grant PASS, the continuous rating must be applicable to the
-requested electrical and thermal operating conditions. If those applicability
-conditions are absent or incompatible, the result must be UNKNOWN.
+### G03-4: Surge boundary — retained
 
-### G03-4: Surge boundary
-
-The current conservative boundary is retained:
+The conservative boundary is unchanged and regression-locked:
 
 - `PRESENT` surge -> UNKNOWN until a qualified transient model exists;
 - `UNKNOWN` surge -> UNKNOWN;
 - Absolute Maximum VIN is not a normal transient operating capability;
 - `NONE_EXPECTED` is distinct from unknown.
 
-S03 must not weaken this behavior.
+Seven regression tests lock this boundary; S03 does not weaken it.
 
 ## 5. Coverage invariant for future requirement fields
 
@@ -125,24 +137,25 @@ have an explicit disposition:
 3. explicitly classified as context / process-only and documented as such.
 
 A field may not be required for user confirmation and then silently disappear
-from formal screening.
+from formal screening. Since S03 this invariant is enforced automatically:
+`REQUIREMENT_FIELD_COVERAGE` in `screening.py` declares a disposition for
+every field, and `tests/test_screening_coverage.py` fails when the declared
+keys deviate from `RequirementCard.model_fields` or the declared rule IDs
+deviate from `DEFAULT_REQUIRED_RULE_IDS`.
 
-Future tests must fail when a newly collected hard requirement has no rule or
-applicability consumer.
+## 6. S03 implementation order — completed
 
-## 6. S03 implementation order
-
-1. Freeze this baseline matrix.
+1. Freeze the baseline matrix (git commit `02df2a9`).
 2. Add the output-tolerance rule with UNKNOWN-first behavior.
 3. Add that rule to screening and `DEFAULT_REQUIRED_RULE_IDS`.
 4. Add a coverage test for collected hard requirements.
 5. Introduce structured thermal applicability and prevent numeric-only PASS.
-6. Tighten continuous-current fallback used by `iout.peak`.
+6. Tighten the continuous-current fallback used by `iout.peak`.
 7. Re-run formal-classification regression tests, including:
    - requested +/-2 percent with no accuracy evidence -> not FORMAL;
    - sufficient ambient temperature but unresolved natural-convection
      applicability -> not FORMAL;
    - Absolute Maximum VIN alone -> never surge PASS.
 
-No existing published product or evidence review state is changed by this
-matrix.
+Final regression: **212 passed**. No existing published product or evidence
+review state was changed by S03.

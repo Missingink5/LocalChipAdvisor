@@ -30,6 +30,7 @@ DECISIVE_LIMIT_KINDS = {
 DEFAULT_REQUIRED_RULE_IDS = (
     "vin.range",
     "vout.range",
+    "vout.tolerance",
     "iout.continuous",
     "iout.peak",
     "surge.input",

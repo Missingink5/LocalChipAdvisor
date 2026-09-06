@@ -430,3 +430,165 @@ S03 未开始，未修改工程规则和 required rule 集合。下一次先建�
 ## Authoritative next single priority action
 
 S03: not started. Await user continuation before implementing the requirements-to-rule coverage matrix. Earlier next-action entries are historical checkpoints superseded by this record. B06 remains pending human provenance.
+
+## S03 completion record (2026-09-06)
+
+# LocalChipAdvisor：S03 完成（需求字段 → 工程规则完整覆盖）
+
+日期：2026-09-06。**S03 全部子项完成并验证；已停在 S04 之前。**
+
+指南 S03 章节（`9.6项目进度以及后续步骤.md` 361-378 行）验收原则全程遵守：
+±2% 无证据不得 formal；温度数值够但自然对流条件不明不得 formal；Absolute
+Maximum 不作为正常工作 PASS 依据。新增的 UNKNOWN 是预期语义，不是回归。
+
+## S03-A：输出误差规则入口（UNKNOWN-only）
+
+- `check_output_tolerance` 只输出 UNKNOWN：无结构化 total-output-error 能力、
+  无决定性精度证据、`vout.range` PASS 与 feedback-reference 电压都不构成精度
+  guarantee。
+- 先 RED（新增测试断言 rule 存在并 UNKNOWN）后 GREEN。
+
+## S03-B：vout.tolerance 接入正式门
+
+- screening 开始发射 `vout.tolerance`，`DEFAULT_REQUIRED_RULE_IDS` 由 6 条扩为
+  **7 条**。
+- 旧演示现在多输出 `vout.tolerance` UNKNOWN issue 是预期变更；issue 测试按
+  rule_id 重建索引并断言 `{vout.tolerance, iout.peak, thermal.ambient}`。
+
+## S03-C：需求字段覆盖守卫
+
+- `REQUIREMENT_FIELD_COVERAGE`（screening.py）为全部 16 个 RequirementCard
+  字段声明去向：hard rule / 结构性适用条件 / context-only(`()`)。
+- `tests/test_screening_coverage.py` 断言字段键 == `RequirementCard.model_fields`
+  且 rule 集合 == `DEFAULT_REQUIRED_RULE_IDS`——"用户条件已收集但无规则消费"
+  从此是测试失败而非静默状态。
+
+## S03-D：热资格结构化条件匹配
+
+- 新增 `ThermalCoolingMode`（NATURAL_CONVECTION / FORCED_AIRFLOW）：需求侧
+  `RequirementCard.cooling_method`、产品侧 `ambient_cooling_method`。
+- `check_ambient_thermal` 重写为 regime 匹配，物理规则而非文本相等：
+  - NC rating 覆盖同数值内 NC 与 FA 请求（NC 是更难 regime）；
+  - FA rating 只覆盖 FA 请求；任一侧 regime 缺失或有 gap → UNKNOWN，绝不 FAIL；
+  - 超过 NC-rating 的 FA 请求：NC rating 不构成约束 → UNKNOWN（不是 FAIL）。
+- `thermal_conditions` 声明为 context-only，不再参与 PASS/FAIL 决策。
+
+## S03-E：峰值电流 fallback 适用性
+
+- `check_peak_output_current` 的 continuous-rating fallback 增加 regime +
+  ambient 门控：rating regime（`iout_continuous_cooling_method`）与请求 regime
+  均须结构化为已知并匹配，否则 UNKNOWN；匹配 regime 内再核对请求环境温度不超
+  rating 声明值。
+
+## S03-F：surge 回归锁定
+
+- 7 个回归测试确认 `PRESENT` → UNKNOWN（附 Absolute Maximum 提醒）、
+  `NONE_EXPECTED` → PASS 绑定 vin_max 证据、显式 unknown → UNKNOWN；
+  S03 未削弱任何既有边界。drift locks 首跑即 GREEN。
+
+## S03-G：最终门禁
+
+| 检查 | 实际结果 |
+|---|---|
+| 全套 pytest | **212 passed in 2.79s** |
+| 改动文件 Ruff | 通过（本 S03 修复 71 条：Decimal 整数字符串、import 排序、注解引号） |
+| 全仓库 Ruff | 未通过：**76 条**，全部位于与 HEAD 逐字节一致的文件（既有债务，S03 零新增） |
+| 全仓库 mypy | 未通过：**10 条**，全部位于 cli.py、ingestion/pdf_parser.py（与 S02.60 台账同位置同数量，S03 零新增） |
+| git diff --check | 通过 |
+| untracked 文件空白检查 | 通过 |
+
+正式覆盖率矩阵：`docs/requirements_coverage.md` 已由 pre-S03 冻结基线升级为
+S03 完成态（基线版本保留在 git commit `02df2a9`）。
+
+## 本轮实际变更文件
+
+- `src/local_chip_advisor/domain/models.py`：`ThermalCoolingMode`；
+  RequirementCard 新增 `cooling_method`。
+- `src/local_chip_advisor/domain/product.py`：新增 `ambient_cooling_method`、
+  `iout_continuous_cooling_method`（后者由并行外部 actor 加入，已采用）。
+- `src/local_chip_advisor/domain/product_rules.py`：`check_output_tolerance`
+  UNKNOWN-only；`check_ambient_thermal` regime 匹配重写；
+  `check_peak_output_current` fallback regime + ambient 门控。
+- `src/local_chip_advisor/domain/decision.py`：`DEFAULT_REQUIRED_RULE_IDS` 7 条。
+- `src/local_chip_advisor/requirements.py`：`RequirementParsePayload` 新增
+  `cooling_method`（含 description，供 AI parser 结构化输出）。
+- `src/local_chip_advisor/screening.py`：`REQUIREMENT_FIELD_COVERAGE` +
+  evaluate_candidate 接线（thermal / peak 均收 `cooling_method`；
+  peak 另收 `ambient_max_c`）。
+- `tests/`：test_product_rules.py（thermal regime 矩阵、tolerance、surge
+  回归）、test_screening.py（confirmed_requirements 增 cooling_method、
+  ambient_rated fixtures、热资格应用级测试）、test_screening_coverage.py（新）、
+  test_recommendation.py（issue 集合按 7 条规则更新）。
+
+## 并行外部修改（已采用，非本会话改动）
+
+- product.py / product_rules.py / test_product_rules.py 在会话期间被并行 actor
+  修改（`iout_continuous_cooling_method`、`requested_cooling_method` /
+  `requested_ambient_max_c` 签名演进及配套测试），已核对签名一致性并集成；
+  HEAD 亦被推进至 `02df2a9`（S02 检查点工作被一次性提交）。
+- 全部 212 个测试通过证明集成后语义一致。
+
+## 约束保持
+
+- 解释器始终为 `.venv\python.exe`；未提交、未 push、未删除数据；
+  未改变 MP4570 发布/review 状态；未触碰 live catalog（v0 保持）；
+  未降低任何门槛；`vout.tolerance`、未声明 regime 的热/峰值路径保持 UNKNOWN，
+  无 UNKNOWN 被改写成 PASS；未留下 `NotImplementedError`。
+
+## 停止点
+
+**S03 完成。S04 未开始。** 下一次从 S04 继续；B06 仍为 pending human
+provenance。Earlier next-action entries are historical checkpoints superseded
+by this record.
+
+## S03-G 复核记录（同日，独立复验）
+
+上节完成记录的 ruff/mypy 数字经独立复验，追加文件级证据与口径说明。
+
+复验命令口径：
+
+- pytest：`.venv\python.exe -B -m pytest -p no:cacheprovider --basetemp <fresh-temp> -q`
+- ruff：`.venv\python.exe -m ruff check --no-cache src tests`
+- mypy：`.venv\python.exe -m mypy --cache-dir <fresh-temp> src/local_chip_advisor tests`
+
+### 复验结果
+
+| 检查 | 复验实际结果 |
+|---|---|
+| 全套 pytest | **212 passed in 3.11s**（台账 2.79s 为同内容运行的 wall-clock 抖动） |
+| 全仓库 ruff | 未通过：**76 条 / 10 个文件**，与上节记录数字一致 |
+| mypy src-only | **10 条**（cli.py 6、ingestion/pdf_parser.py 4），与记录及 S02.60 台账同位置同数量 |
+| mypy src+tests | **101 条 / 15 个文件**；src 10 条同上，tests 91 条全部为既有未注解测试债务 |
+| git diff --check | 通过 |
+
+### ruff 76 条分布（全部位于 S03 未修改文件）
+
+- tests/test_requirements.py 41、tests/test_sqlite_catalog.py 24、
+  tests/test_catalog_io.py 3、tests/test_advisor.py 2
+- tests/test_ranking.py 1、tests/test_publication_gate.py 1、
+  tests/test_product_record.py 1
+- src/local_chip_advisor/ollama_requirements.py 1、
+  src/local_chip_advisor/advisor.py 1、src/local_chip_advisor/catalog/io.py 1
+
+S03 改动文件（domain/、decision.py、screening.py、requirements.py、
+test_product_rules.py、test_screening.py、test_screening_coverage.py、
+test_recommendation.py）ruff 均 0 条。
+
+### mypy 101 条口径说明
+
+上节记录“全仓库 mypy 10 条”实际为 **src-only 口径**（该命令只检查
+`src/local_chip_advisor`）。若按全仓库（src + tests）口径复验为 **101 条 /
+15 个文件**，其中：
+
+- src：cli.py 6（no-untyped-def）、pdf_parser.py 4 —— 与记录一致；
+- tests：91 条，根因是历史测试文件的未注解 fixtures/helpers
+  （test_cli.py 30、test_publication_gate.py 16、test_review_audit_models.py 15、
+  test_screening.py 11、test_recommendation.py 3、test_pdf_parser.py 3、
+  test_advisor.py 3、test_product_record.py 3、test_ollama_requirements.py 2、
+  test_s02_database_guards.py 2、test_ranking.py 1、test_sqlite_catalog.py 1、
+  test_catalog_io.py 1，合计 91），模式为 no-untyped-def /
+  no-untyped-call / arg-type 级联，均非 S03 引入的语义错误；S03 改动文件
+  mypy 0 条。
+
+全仓库 lint/type 欠账与 S02.60 台账同源同类；S03 零新增，未扩展到无关清理。
+不能将 pytest 全绿写成“所有检查全绿”。

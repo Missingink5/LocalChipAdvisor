@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from .models import CheckResult, CheckState, SurgeKnowledge
+from .models import (
+    CheckResult,
+    CheckState,
+    SurgeKnowledge,
+    ThermalCoolingMode,
+)
 from .product import BuckProductRecord
 
 
@@ -374,8 +379,20 @@ def check_peak_output_current(
     product: BuckProductRecord,
     requested_iout_peak_a: Decimal,
     requested_peak_duration_ms: Decimal,
+    requested_cooling_method: ThermalCoolingMode | None = None,
+    requested_ambient_max_c: Decimal | None = None,
 ) -> CheckResult:
-    """Check peak load against an explicit current-and-duration product rating."""
+    """Check peak load against an explicit current-and-duration product rating.
+
+    The continuous-current fallback is valid only within the rating's own
+    applicability: a rating magnitude alone must not be generalized to any
+    operating regime or ambient temperature. Natural convection is the harder
+    regime, so a natural-convection rating also covers forced-airflow
+    operation, while a forced-airflow rating does not prove natural
+    convection. A fallback PASS additionally requires the rating's applicable
+    ambient maximum to be structurally stated and to cover the requested
+    operating ambient.
+    """
 
     if requested_iout_peak_a <= 0:
         raise ValueError("requested_iout_peak_a must be positive")
@@ -416,16 +433,114 @@ def check_peak_output_current(
                 ),
             )
 
+        actual = f"{continuous_max}A continuous rated maximum"
+
+        if requested_cooling_method is None:
+            return CheckResult(
+                rule_id="iout.peak",
+                field_name="iout.continuous",
+                state=CheckState.UNKNOWN,
+                requirement=requirement,
+                actual=actual,
+                reason=(
+                    "the requested cooling regime is not structurally "
+                    "characterized; a numeric continuous rating cannot be "
+                    "extended to an unknown regime"
+                ),
+            )
+
+        if requested_ambient_max_c is None:
+            return CheckResult(
+                rule_id="iout.peak",
+                field_name="iout.continuous",
+                state=CheckState.UNKNOWN,
+                requirement=requirement,
+                actual=actual,
+                reason=(
+                    "the requested ambient maximum is not structurally "
+                    "characterized; a numeric continuous rating cannot be "
+                    "extended to an unknown ambient temperature"
+                ),
+            )
+
+        rating_cooling = product.iout_continuous_cooling_method
+        rating_ambient_max_c = product.iout_continuous_ambient_max_c
+
+        if rating_cooling is None:
+            return CheckResult(
+                rule_id="iout.peak",
+                field_name="iout.continuous",
+                state=CheckState.UNKNOWN,
+                requirement=requirement,
+                actual=actual,
+                reason=(
+                    "the continuous-current rating's cooling regime is not "
+                    "structurally stated; a numeric maximum alone must not "
+                    "be generalized to any operating regime"
+                ),
+            )
+
+        if rating_ambient_max_c is None:
+            return CheckResult(
+                rule_id="iout.peak",
+                field_name="iout.continuous",
+                state=CheckState.UNKNOWN,
+                requirement=requirement,
+                actual=actual,
+                reason=(
+                    "the continuous-current rating's applicable ambient "
+                    "maximum is not structurally stated; a numeric maximum "
+                    "alone must not be generalized to any ambient "
+                    "temperature"
+                ),
+            )
+
+        if (
+            rating_cooling is ThermalCoolingMode.FORCED_AIRFLOW
+            and requested_cooling_method
+            is not ThermalCoolingMode.FORCED_AIRFLOW
+        ):
+            return CheckResult(
+                rule_id="iout.peak",
+                field_name="iout.continuous",
+                state=CheckState.UNKNOWN,
+                requirement=requirement,
+                actual=actual,
+                reason=(
+                    f"the continuous rating was characterized under "
+                    f"{rating_cooling.value} and cannot prove "
+                    f"{requested_cooling_method.value} operation"
+                ),
+            )
+
+        if requested_ambient_max_c > rating_ambient_max_c:
+            return CheckResult(
+                rule_id="iout.peak",
+                field_name="iout.continuous",
+                state=CheckState.UNKNOWN,
+                requirement=requirement,
+                actual=actual,
+                reason=(
+                    f"the continuous rating is declared up to "
+                    f"{rating_ambient_max_c}°C ambient and cannot prove "
+                    f"operation at the requested "
+                    f"{requested_ambient_max_c}°C ambient"
+                ),
+            )
+
         return CheckResult(
             rule_id="iout.peak",
             field_name="iout.continuous",
             state=CheckState.PASS,
             requirement=requirement,
-            actual=f"{continuous_max}A continuous rated maximum",
+            actual=actual,
             reason=(
                 f"the product is rated to provide {continuous_max}A "
-                "continuously, which is stronger than the requested "
-                f"{requested_iout_peak_a}A finite-duration peak"
+                f"continuously under {rating_cooling.value} up to "
+                f"{rating_ambient_max_c}°C ambient, which covers the "
+                f"requested {requested_iout_peak_a}A finite-duration peak "
+                f"under {requested_cooling_method.value} at up to "
+                f"{requested_ambient_max_c}°C ambient"
             ),
             evidence_ids=evidence_ids,
         )
@@ -504,20 +619,83 @@ def check_peak_output_current(
         evidence_ids=evidence_ids,
     )
 
+def check_output_tolerance(
+    *,
+    product: BuckProductRecord,
+    requested_tolerance_percent: Decimal,
+) -> CheckResult:
+    """Check requested output-voltage tolerance against a total-error guarantee.
+
+    First-version boundary: the product record has no structured total
+    output-voltage error capability, and a feedback-reference voltage alone is
+    not a total system accuracy guarantee. Output-range PASS cannot substitute
+    for accuracy. Without decisive reviewed total-error evidence the rule must
+    remain UNKNOWN. A later total-error implementation would need explicit
+    error sources, worst-case combination rules, operating conditions and
+    reviewed evidence before it may grant PASS or FAIL.
+    """
+
+    if requested_tolerance_percent <= 0:
+        raise ValueError(
+            "requested_tolerance_percent must be positive"
+        )
+
+    requirement = (
+        f"output-voltage tolerance within "
+        f"±{requested_tolerance_percent}%"
+    )
+
+    if product.feedback_reference_v is None:
+        return CheckResult(
+            rule_id="vout.tolerance",
+            field_name="vout.tolerance",
+            state=CheckState.UNKNOWN,
+            requirement=requirement,
+            actual=None,
+            reason=(
+                "product has no structured total output-voltage error "
+                "capability; output-voltage range evidence cannot prove "
+                "output accuracy"
+            ),
+        )
+
+    return CheckResult(
+        rule_id="vout.tolerance",
+        field_name="vout.tolerance",
+        state=CheckState.UNKNOWN,
+        requirement=requirement,
+        actual=(
+            f"feedback reference voltage="
+            f"{product.feedback_reference_v}V"
+        ),
+        reason=(
+            "a feedback-reference voltage is not a guaranteed total "
+            "output-voltage error; decisive total-error evidence is missing"
+        ),
+    )
+
+
 def check_ambient_thermal(
     *,
     product: BuckProductRecord,
     ambient_max_c: Decimal,
-    thermal_conditions: str,
+    cooling_method: ThermalCoolingMode | None,
 ) -> CheckResult:
-    """Check ambient temperature only against an explicit ambient rating."""
+    """Check ambient qualification against a regime-matched explicit rating.
 
-    if not thermal_conditions.strip():
-        raise ValueError("thermal_conditions must not be blank")
+    A numeric ambient rating is only decisive inside the conditions under
+    which it was characterized. v1 structures one dimension of that
+    applicability: the cooling regime. Natural convection is the harder
+    regime, so a natural-convection rating also covers forced-airflow
+    operation up to its numeric value, while a forced-airflow rating does
+    not prove natural convection. A missing regime on either side, or a
+    regime the rating does not cover, leaves the check UNKNOWN; free text
+    (PCB, heatsink, power notes) is never used as the proof.
+    """
 
     requirement = (
         f"ambient maximum={ambient_max_c}°C; "
-        f"thermal conditions={thermal_conditions.strip()}"
+        f"cooling={cooling_method.value if cooling_method is not None else 'unspecified'}"
     )
 
     ambient_rating = product.ambient_temp_max_c
@@ -552,25 +730,103 @@ def check_ambient_thermal(
 
     actual = f"ambient maximum rating={ambient_rating}°C"
 
-    if ambient_max_c > ambient_rating:
-        state = CheckState.FAIL
-        reason = (
-            f"requested ambient maximum {ambient_max_c}°C exceeds "
-            f"the explicit operating ambient rating of {ambient_rating}°C"
+    product_cooling = product.ambient_cooling_method
+
+    # The rating's applicability conditions must be structurally stated.
+    if product_cooling is None:
+        return CheckResult(
+            rule_id="thermal.ambient",
+            field_name="thermal.ambient",
+            state=CheckState.UNKNOWN,
+            requirement=requirement,
+            actual=actual,
+            reason=(
+                "the explicit ambient rating's applicability conditions "
+                "are not structurally stated; the rating cannot be extended "
+                "to any user cooling regime"
+            ),
         )
-    else:
-        state = CheckState.PASS
-        reason = (
-            f"requested ambient maximum {ambient_max_c}°C is within "
-            f"the explicit operating ambient rating of {ambient_rating}°C"
+
+    # The user's cooling condition must be structurally characterized.
+    if cooling_method is None:
+        return CheckResult(
+            rule_id="thermal.ambient",
+            field_name="thermal.ambient",
+            state=CheckState.UNKNOWN,
+            requirement=requirement,
+            actual=actual,
+            reason=(
+                "the user's operating cooling regime is not structurally "
+                "characterized; numeric comparison alone cannot prove "
+                "ambient thermal qualification"
+            ),
+        )
+
+    # A forced-airflow rating only proves forced-airflow operation.
+    if (
+        product_cooling is ThermalCoolingMode.FORCED_AIRFLOW
+        and cooling_method is not ThermalCoolingMode.FORCED_AIRFLOW
+    ):
+        return CheckResult(
+            rule_id="thermal.ambient",
+            field_name="thermal.ambient",
+            state=CheckState.UNKNOWN,
+            requirement=requirement,
+            actual=actual,
+            reason=(
+                f"the explicit ambient rating was characterized under "
+                f"{product_cooling.value} and cannot prove "
+                f"{cooling_method.value} operation"
+            ),
+        )
+
+    if ambient_max_c <= ambient_rating:
+        return CheckResult(
+            rule_id="thermal.ambient",
+            field_name="ambient_temp_max_c",
+            state=CheckState.PASS,
+            requirement=requirement,
+            actual=actual,
+            reason=(
+                f"requested ambient maximum {ambient_max_c}°C under "
+                f"{cooling_method.value} is within the explicit operating "
+                f"ambient rating of {ambient_rating}°C characterized under "
+                f"{product_cooling.value}"
+            ),
+            evidence_ids=evidence_ids,
+        )
+
+    # Above the rating: FAIL is only decidable when the numeric limit was
+    # characterized under the user's own regime. A natural-convection rating
+    # does not bound forced-airflow operation above its numeric value.
+    if (
+        product_cooling is ThermalCoolingMode.NATURAL_CONVECTION
+        and cooling_method is ThermalCoolingMode.FORCED_AIRFLOW
+    ):
+        return CheckResult(
+            rule_id="thermal.ambient",
+            field_name="thermal.ambient",
+            state=CheckState.UNKNOWN,
+            requirement=requirement,
+            actual=actual,
+            reason=(
+                f"requested ambient maximum {ambient_max_c}°C exceeds the "
+                f"natural-convection rating of {ambient_rating}°C, but that "
+                "rating does not bound forced-airflow operation above it"
+            ),
         )
 
     return CheckResult(
         rule_id="thermal.ambient",
         field_name="ambient_temp_max_c",
-        state=state,
+        state=CheckState.FAIL,
         requirement=requirement,
         actual=actual,
-        reason=reason,
+        reason=(
+            f"requested ambient maximum {ambient_max_c}°C under "
+            f"{cooling_method.value} exceeds the explicit operating ambient "
+            f"rating of {ambient_rating}°C characterized under "
+            f"{product_cooling.value}"
+        ),
         evidence_ids=evidence_ids,
     )

@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from local_chip_advisor.domain import (
     RequirementCard,
     SurgeKnowledge,
+    ThermalCoolingMode,
 )
 
 
@@ -20,7 +21,7 @@ class RequirementParser(Protocol):
     def parse(
         self,
         raw_request: str,
-    ) -> "RequirementParsePayload":
+    ) -> RequirementParsePayload:
         ...
 
 
@@ -184,6 +185,14 @@ class RequirementParsePayload(BaseModel):
         description=(
             "Explicitly stated cooling or thermal condition, such as natural convection, "
             "forced airflow, heatsinking, or PCB thermal constraints."
+        ),
+    )
+    cooling_method: ThermalCoolingMode | None = Field(
+        default=None,
+        description=(
+            "Structured operating cooling regime explicitly stated by the user: "
+            "natural convection or forced airflow; null when the user does not "
+            "state a cooling regime. Used for regime-matched thermal qualification."
         ),
     )
 
