@@ -68,7 +68,7 @@ def test_published_candidate_runs_all_required_rules() -> None:
 
     assert states["vin.range"] == "PASS"
     assert states["vout.range"] == "PASS"
-    assert states["iout.continuous"] == "PASS"
+    assert states["iout.continuous"] == "UNKNOWN"
     assert states["surge.input"] == "PASS"
 
     # The 3A request fits the 3A continuous rating, but the fixture states
@@ -83,6 +83,59 @@ def test_published_candidate_runs_all_required_rules() -> None:
     assert states["vout.tolerance"] == "UNKNOWN"
 
     assert evaluation.bucket is CandidateBucket.NEEDS_VERIFICATION
+
+
+def test_free_text_current_conditions_cannot_grant_qualification() -> None:
+    evidence = tuple(
+        item.model_copy(
+            update={
+                "test_conditions": (
+                    "VIN=12V, forced airflow, TA=25C, 4-layer PCB only; "
+                    "evaluation request uses VIN=18V to 30V, natural "
+                    "convection, TA=70C"
+                )
+            }
+        )
+        if item.evidence_id == "ev:iout"
+        else item
+        for item in reviewed_evidence()
+    )
+    product = prepare_published_product(
+        product=publishable_draft().model_copy(
+            update={
+                "iout_continuous_cooling_method": (
+                    ThermalCoolingMode.NATURAL_CONVECTION
+                ),
+                "iout_continuous_ambient_max_c": Decimal(85),
+            }
+        ),
+        evidence=evidence,
+    )
+
+    evaluation = evaluate_candidate(
+        product=product,
+        evidence=evidence,
+        requirements=confirmed_requirements(),
+    )
+    checks_by_rule = {
+        check.rule_id: check
+        for check in evaluation.checks
+    }
+    current_check = checks_by_rule["iout.continuous"]
+    peak_check = checks_by_rule["iout.peak"]
+
+    assert current_check.state is CheckState.UNKNOWN
+    assert current_check.evidence_ids == ()
+    assert (
+        "cooling, ambient, VIN, PCB, load, and power"
+        in current_check.reason
+    )
+    assert peak_check.state is CheckState.UNKNOWN
+    assert peak_check.evidence_ids == ()
+    assert (
+        "cooling, ambient, VIN, PCB, load, and power"
+        in peak_check.reason
+    )
 
 
 def test_output_tolerance_check_is_bound_to_confirmed_tolerance_requirement() -> None:
@@ -189,8 +242,8 @@ def test_thermal_ambient_cannot_pass_without_structured_user_cooling() -> None:
     assert unstated_states["thermal.ambient"] is CheckState.UNKNOWN
     assert unstated_evaluation.bucket is CandidateBucket.NEEDS_VERIFICATION
 
-    # With the same numbers and a matched natural-convection regime, the
-    # thermal rule passes and carries its decisive evidence.
+    # Matching numbers and a cooling enum still do not prove applicability:
+    # PCB construction, heatsink, load, and power conditions are unresolved.
     matched_evaluation = evaluate_candidate(
         product=product,
         evidence=evidence,
@@ -200,8 +253,12 @@ def test_thermal_ambient_cannot_pass_without_structured_user_cooling() -> None:
         check.rule_id: check
         for check in matched_evaluation.checks
     }
-    assert matched_states["thermal.ambient"].state is CheckState.PASS
-    assert matched_states["thermal.ambient"].evidence_ids == ("ev:ambient",)
+    assert matched_states["thermal.ambient"].state is CheckState.UNKNOWN
+    assert matched_states["thermal.ambient"].evidence_ids == ()
+    assert (
+        "PCB, heatsink, load, and power"
+        in matched_states["thermal.ambient"].reason
+    )
 
     # The overall bucket stays NEEDS_VERIFICATION because the tolerance rule
     # is UNKNOWN; thermal evidence cannot substitute for accuracy evidence.

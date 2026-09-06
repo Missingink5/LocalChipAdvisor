@@ -234,7 +234,13 @@ def check_continuous_output_current(
     product: BuckProductRecord,
     requested_iout_a: Decimal,
 ) -> CheckResult:
-    """Check required continuous load current against the rated maximum."""
+    """Check continuous load without overextending an unqualified rating.
+
+    The current schema binds the magnitude to evidence, but it cannot bind the
+    rating's cooling, ambient, VIN, PCB, load, and power applicability. The
+    numeric maximum can therefore reject a request above it, but cannot grant
+    qualification to a request within it.
+    """
 
     if requested_iout_a <= 0:
         raise ValueError("requested_iout_a must be positive")
@@ -269,26 +275,30 @@ def check_continuous_output_current(
         )
 
     if requested_iout_a > rated_max:
-        state = CheckState.FAIL
-        reason = (
-            f"requested continuous IOUT={requested_iout_a}A exceeds "
-            f"the rated maximum of {rated_max}A"
-        )
-    else:
-        state = CheckState.PASS
-        reason = (
-            f"requested continuous IOUT={requested_iout_a}A does not exceed "
-            f"the rated maximum of {rated_max}A"
+        return CheckResult(
+            rule_id="iout.continuous",
+            field_name="iout.continuous",
+            state=CheckState.FAIL,
+            requirement=requirement,
+            actual=actual,
+            reason=(
+                f"requested continuous IOUT={requested_iout_a}A exceeds "
+                f"the rated maximum of {rated_max}A"
+            ),
+            evidence_ids=evidence_ids,
         )
 
     return CheckResult(
         rule_id="iout.continuous",
         field_name="iout.continuous",
-        state=state,
+        state=CheckState.UNKNOWN,
         requirement=requirement,
         actual=actual,
-        reason=reason,
-        evidence_ids=evidence_ids,
+        reason=(
+            "the numeric current is within the stated maximum, but cooling, "
+            "ambient, VIN, PCB, load, and power applicability is not "
+            "structurally represented and evidence-bound"
+        ),
     )
 
 def check_input_surge(
@@ -384,14 +394,11 @@ def check_peak_output_current(
 ) -> CheckResult:
     """Check peak load against an explicit current-and-duration product rating.
 
-    The continuous-current fallback is valid only within the rating's own
-    applicability: a rating magnitude alone must not be generalized to any
-    operating regime or ambient temperature. Natural convection is the harder
-    regime, so a natural-convection rating also covers forced-airflow
-    operation, while a forced-airflow rating does not prove natural
-    convection. A fallback PASS additionally requires the rating's applicable
-    ambient maximum to be structurally stated and to cover the requested
-    operating ambient.
+    A rating magnitude alone must not be generalized to arbitrary operating
+    conditions. The current schema cannot fully bind cooling, ambient, VIN,
+    PCB, load, and power applicability to either a continuous fallback or an
+    explicit peak rating. Numeric limits can therefore reject requests that
+    exceed them, but cannot grant qualification within them.
     """
 
     if requested_iout_peak_a <= 0:
@@ -531,18 +538,15 @@ def check_peak_output_current(
         return CheckResult(
             rule_id="iout.peak",
             field_name="iout.continuous",
-            state=CheckState.PASS,
+            state=CheckState.UNKNOWN,
             requirement=requirement,
             actual=actual,
             reason=(
-                f"the product is rated to provide {continuous_max}A "
-                f"continuously under {rating_cooling.value} up to "
-                f"{rating_ambient_max_c}°C ambient, which covers the "
-                f"requested {requested_iout_peak_a}A finite-duration peak "
-                f"under {requested_cooling_method.value} at up to "
-                f"{requested_ambient_max_c}°C ambient"
+                "the numeric continuous rating and the represented cooling "
+                "and ambient fields cover the request, but cooling, ambient, "
+                "VIN, PCB, load, and power applicability is not fully "
+                "structured and evidence-bound"
             ),
-            evidence_ids=evidence_ids,
         )
 
     if peak_max is None or duration_max is None:
@@ -602,11 +606,11 @@ def check_peak_output_current(
             f"limit of {peak_max}A for up to {duration_max}ms"
         )
     else:
-        state = CheckState.PASS
+        state = CheckState.UNKNOWN
         reason = (
-            f"requested peak {requested_iout_peak_a}A for "
-            f"{requested_peak_duration_ms}ms is within the qualified "
-            f"limit of {peak_max}A for up to {duration_max}ms"
+            "the requested peak current and duration are within the stated "
+            "numeric limits, but cooling, ambient, VIN, PCB, load, and power "
+            "applicability is not structurally represented and evidence-bound"
         )
 
     return CheckResult(
@@ -616,7 +620,9 @@ def check_peak_output_current(
         requirement=requirement,
         actual=actual,
         reason=reason,
-        evidence_ids=evidence_ids,
+        evidence_ids=(
+            evidence_ids if state is CheckState.FAIL else ()
+        ),
     )
 
 def check_output_tolerance(
@@ -684,13 +690,13 @@ def check_ambient_thermal(
     """Check ambient qualification against a regime-matched explicit rating.
 
     A numeric ambient rating is only decisive inside the conditions under
-    which it was characterized. v1 structures one dimension of that
-    applicability: the cooling regime. Natural convection is the harder
-    regime, so a natural-convection rating also covers forced-airflow
-    operation up to its numeric value, while a forced-airflow rating does
-    not prove natural convection. A missing regime on either side, or a
-    regime the rating does not cover, leaves the check UNKNOWN; free text
-    (PCB, heatsink, power notes) is never used as the proof.
+    which it was characterized. v1 structures just one dimension of that
+    applicability: the cooling regime. Missing or incompatible regimes leave
+    the check UNKNOWN. Even compatible regimes cannot produce PASS while PCB,
+    heatsink, load, and power applicability remains unstructured and unproven.
+    Free text is never used as proof. An over-temperature request can still
+    produce FAIL when the explicit rating was characterized in the user's own
+    regime.
     """
 
     requirement = (
@@ -783,17 +789,16 @@ def check_ambient_thermal(
     if ambient_max_c <= ambient_rating:
         return CheckResult(
             rule_id="thermal.ambient",
-            field_name="ambient_temp_max_c",
-            state=CheckState.PASS,
+            field_name="thermal.ambient",
+            state=CheckState.UNKNOWN,
             requirement=requirement,
             actual=actual,
             reason=(
-                f"requested ambient maximum {ambient_max_c}°C under "
-                f"{cooling_method.value} is within the explicit operating "
-                f"ambient rating of {ambient_rating}°C characterized under "
-                f"{product_cooling.value}"
+                f"requested ambient maximum {ambient_max_c} C is within the "
+                f"explicit {ambient_rating} C rating and the cooling regimes "
+                "are compatible, but PCB, heatsink, load, and power "
+                "applicability is not structurally represented or proven"
             ),
-            evidence_ids=evidence_ids,
         )
 
     # Above the rating: FAIL is only decidable when the numeric limit was

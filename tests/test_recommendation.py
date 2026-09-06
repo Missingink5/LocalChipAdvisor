@@ -199,9 +199,9 @@ def test_candidate_issues_exposes_unknown_verification_reason(
     candidate = result.needs_verification[0]
     issues = candidate_issues(candidate)
 
-    # Every UNKNOWN rule must surface: the tolerance rule has no structured
-    # total-error capability, the peak fallback has no stated rating regime,
-    # and the fixture has no explicit ambient operating rating.
+    # Every UNKNOWN rule must surface: current applicability and total-error
+    # capability are not fully structured, the peak fallback has no stated
+    # rating regime, and no explicit ambient operating rating is available.
     issues_by_rule = {
         issue.rule_id: issue
         for issue in issues
@@ -209,6 +209,7 @@ def test_candidate_issues_exposes_unknown_verification_reason(
 
     assert set(issues_by_rule) == {
         "vout.tolerance",
+        "iout.continuous",
         "iout.peak",
         "thermal.ambient",
     }
@@ -277,9 +278,11 @@ def test_recommendation_result_embeds_issues_for_verification_candidate(
 
     assert set(issues_by_rule) == {
         "vout.tolerance",
+        "iout.continuous",
         "iout.peak",
         "thermal.ambient",
     }
     assert issues_by_rule["vout.tolerance"].state.value == "UNKNOWN"
+    assert issues_by_rule["iout.continuous"].state.value == "UNKNOWN"
     assert issues_by_rule["iout.peak"].state.value == "UNKNOWN"
     assert issues_by_rule["thermal.ambient"].state.value == "UNKNOWN"

@@ -29,19 +29,10 @@ from local_chip_advisor.domain.product_rules import (
     check_peak_output_current,
 )
 
-#: Inventory of what screening does with every RequirementCard field.
-#:
-#: Fields mapped to rule IDs are inputs to those deterministic checks (the
-#: surge fields only feed ``surge.input`` when a surge is declared PRESENT).
-#: Fields mapped to ``()`` are intentional context/process-only inputs. The
-#: guard in ``tests/test_screening_coverage.py`` requires the declared keys to
-#: equal ``RequirementCard.model_fields`` and the declared rule IDs to equal
-#: ``DEFAULT_REQUIRED_RULE_IDS``, so a requirement field added later can never
-#: be collected but silently consumed by no rule.
-REQUIREMENT_FIELD_COVERAGE: Mapping[str, tuple[str, ...]] = {
-    "raw_request": (),  # original request text, kept for traceability
-    "vin_min_v": ("vin.range",),
-    "vin_nominal_v": (),  # nominal operating point; rules use the min/max bounds
+#: Requirement fields that may change deterministic qualification checks.
+#: Conditional surge values feed ``surge.input`` only when a surge is PRESENT.
+QUALIFICATION_INPUT_RULES: Mapping[str, tuple[str, ...]] = {
+    "vin_min_v": ("vin.range", "vout.range"),
     "vin_max_v": ("vin.range",),
     "surge_knowledge": ("surge.input",),
     "surge_voltage_v": ("surge.input",),  # only when surge_knowledge is PRESENT
@@ -54,13 +45,29 @@ REQUIREMENT_FIELD_COVERAGE: Mapping[str, tuple[str, ...]] = {
     "ambient_max_c": ("thermal.ambient", "iout.peak"),
     "cooling_method": (
         "thermal.ambient",
-        # regime gate for the continuous-rating peak fallback
         "iout.peak",
     ),
-    # Free-text thermal context (PCB/heatsink notes) is kept for traceability;
-    # it is never the decision input for thermal.ambient.
-    "thermal_conditions": (),
-    "confirmed_by_user": (),  # process gate enforced in evaluate_candidate
+}
+
+#: Inputs retained for traceability, clarification, or cross-field validation.
+#: They cannot directly change qualification checks in the current rule set.
+CONTEXT_CLARIFICATION_FIELDS = frozenset(
+    {
+        "raw_request",
+        "vin_nominal_v",
+        "thermal_conditions",
+    }
+)
+
+#: Workflow metadata enforced before qualification rules execute.
+PROCESS_METADATA_FIELDS = frozenset({"confirmed_by_user"})
+
+#: Complete inventory used by the schema-drift guard. The explicit categories
+#: prevent context and process fields from being mistaken for unused rule input.
+REQUIREMENT_FIELD_COVERAGE: Mapping[str, tuple[str, ...]] = {
+    **QUALIFICATION_INPUT_RULES,
+    **{field_name: () for field_name in CONTEXT_CLARIFICATION_FIELDS},
+    **{field_name: () for field_name in PROCESS_METADATA_FIELDS},
 }
 
 

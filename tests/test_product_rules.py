@@ -145,7 +145,7 @@ def test_input_voltage_is_unknown_when_decisive_evidence_is_missing() -> None:
     assert result.evidence_ids == ()
 
 
-def test_continuous_output_current_passes_at_rated_limit() -> None:
+def test_continuous_output_current_is_unknown_without_bound_applicability() -> None:
     product = valid_product(
         iout_continuous_max_a="3",
         evidence_ids_by_field=(
@@ -158,9 +158,10 @@ def test_continuous_output_current_passes_at_rated_limit() -> None:
         requested_iout_a=Decimal(3),
     )
 
-    assert result.state is CheckState.PASS
+    assert result.state is CheckState.UNKNOWN
     assert result.actual == "3A continuous rated maximum"
-    assert result.evidence_ids == ("ev:mp4570:iout",)
+    assert result.evidence_ids == ()
+    assert "cooling, ambient, VIN, PCB, load, and power" in result.reason
 
 
 def test_continuous_output_current_fails_above_rated_limit() -> None:
@@ -380,7 +381,7 @@ def test_input_surge_rejects_non_positive_transient_values() -> None:
             surge_duration_ms=Decimal(1),
         )
 
-def test_peak_output_current_passes_with_explicit_current_and_duration_rating() -> None:
+def test_explicit_peak_is_unknown_without_bound_applicability() -> None:
     product = valid_product(
         iout_peak_max_a="4",
         iout_peak_duration_max_ms="10",
@@ -395,11 +396,13 @@ def test_peak_output_current_passes_with_explicit_current_and_duration_rating() 
         requested_iout_peak_a=Decimal("3.5"),
         requested_peak_duration_ms=Decimal(5),
         requested_cooling_method=ThermalCoolingMode.NATURAL_CONVECTION,
+        requested_ambient_max_c=Decimal(70),
     )
 
     assert result.rule_id == "iout.peak"
-    assert result.state is CheckState.PASS
-    assert result.evidence_ids == ("ev:peak",)
+    assert result.state is CheckState.UNKNOWN
+    assert result.evidence_ids == ()
+    assert "cooling, ambient, VIN, PCB, load, and power" in result.reason
 
 
 def test_peak_output_current_fails_when_current_exceeds_rating() -> None:
@@ -460,7 +463,7 @@ def test_peak_output_current_is_unknown_without_duration_rating() -> None:
     assert result.state is CheckState.UNKNOWN
     assert result.evidence_ids == ()
 
-def test_ambient_thermal_passes_with_explicit_ambient_rating() -> None:
+def test_ambient_thermal_is_unknown_when_only_temperature_and_regime_are_known() -> None:
     product = valid_product(
         ambient_temp_max_c="85",
         ambient_cooling_method="NATURAL_CONVECTION",
@@ -476,8 +479,9 @@ def test_ambient_thermal_passes_with_explicit_ambient_rating() -> None:
     )
 
     assert result.rule_id == "thermal.ambient"
-    assert result.state is CheckState.PASS
-    assert result.evidence_ids == ("ev:ambient",)
+    assert result.state is CheckState.UNKNOWN
+    assert result.evidence_ids == ()
+    assert "PCB, heatsink, load, and power" in result.reason
 
 
 def test_ambient_thermal_fails_above_explicit_ambient_rating() -> None:
@@ -599,7 +603,7 @@ def test_forced_airflow_rating_fails_above_its_own_regime() -> None:
     assert result.state is CheckState.FAIL
 
 
-def test_natural_convection_rating_covers_forced_airflow_within_limit() -> None:
+def test_natural_rating_still_needs_full_applicability_for_forced_airflow() -> None:
     product = valid_product(
         ambient_temp_max_c="85",
         ambient_cooling_method="NATURAL_CONVECTION",
@@ -614,9 +618,11 @@ def test_natural_convection_rating_covers_forced_airflow_within_limit() -> None:
         cooling_method=ThermalCoolingMode.FORCED_AIRFLOW,
     )
 
-    # Natural convection is the harder regime; a natural-convection rating
-    # also covers forced-airflow operation up to its numeric value.
-    assert result.state is CheckState.PASS
+    # The cooling relation and numeric limit are compatible, but the rating's
+    # remaining PCB, heatsink, load, and power conditions are unresolved.
+    assert result.state is CheckState.UNKNOWN
+    assert result.evidence_ids == ()
+    assert "PCB, heatsink, load, and power" in result.reason
 
 
 def test_natural_rating_does_not_bound_forced_airflow_above_it() -> None:
@@ -640,7 +646,7 @@ def test_natural_rating_does_not_bound_forced_airflow_above_it() -> None:
     assert result.evidence_ids == ()
 
 
-def test_peak_output_current_uses_continuous_rating_when_it_is_sufficient() -> None:
+def test_peak_fallback_is_unknown_without_fully_bound_applicability() -> None:
     product = valid_product(
         iout_continuous_max_a="3",
         iout_continuous_cooling_method="NATURAL_CONVECTION",
@@ -662,8 +668,9 @@ def test_peak_output_current_uses_continuous_rating_when_it_is_sufficient() -> N
 
     assert result.rule_id == "iout.peak"
     assert result.field_name == "iout.continuous"
-    assert result.state is CheckState.PASS
-    assert result.evidence_ids == ("ev:continuous",)
+    assert result.state is CheckState.UNKNOWN
+    assert result.evidence_ids == ()
+    assert "cooling, ambient, VIN, PCB, load, and power" in result.reason
 
 
 def test_peak_fallback_is_unknown_when_user_cooling_regime_is_unstated() -> None:
@@ -743,7 +750,7 @@ def test_peak_fallback_forced_airflow_rating_does_not_prove_natural_convection()
     assert "NATURAL_CONVECTION" in result.reason
 
 
-def test_peak_fallback_natural_convection_rating_covers_forced_airflow_request() -> None:
+def test_peak_fallback_natural_rating_still_needs_bound_applicability() -> None:
     product = valid_product(
         iout_continuous_max_a="3",
         iout_continuous_cooling_method="NATURAL_CONVECTION",
@@ -763,8 +770,9 @@ def test_peak_fallback_natural_convection_rating_covers_forced_airflow_request()
         requested_ambient_max_c=Decimal(70),
     )
 
-    assert result.state is CheckState.PASS
-    assert result.evidence_ids == ("ev:continuous",)
+    assert result.state is CheckState.UNKNOWN
+    assert result.evidence_ids == ()
+    assert "cooling, ambient, VIN, PCB, load, and power" in result.reason
 
 
 def test_peak_fallback_is_unknown_when_rating_ambient_applicability_is_unstated() -> None:
