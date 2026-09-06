@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "dataset_id": "s04-eval-v1",
+  "corpus_id": "s04-corpus-v1",
+  "description": "S04 grouped gold evaluation dataset: 50 semantic groups x 4 language expressions = 200 knowledge cases (30 dev / 20 holdout groups) plus 10 boundary groups x 4 = 40 boundary cases. Counts below are computed by tests/test_s04_evaluation_dataset.py on 2026-09-06 and asserted on every run.",
+  "created_date": "2026-09-06",
+  "counts": {
+    "normal_groups_dev": 30,
+    "normal_groups_holdout": 20,
+    "normal_cases": 200,
+    "boundary_groups_dev": 7,
+    "boundary_groups_holdout": 3,
+    "boundary_cases": 40,
+    "gold_spans": 79
+  },
+  "review": {
+    "agent_checked": true,
+    "agent_check_notes": "Structural invariants enforced by tests/test_s04_evaluation_dataset.py; 79/79 spans verbatim-matched against the source PDF extractions; page anchors verified from page-marked dumps. See review_summary.md.",
+    "human_reviewed": false,
+    "holdout_sealed": false,
+    "status": "S04 TECHNICAL DATASET COMPLETE / HUMAN REVIEW PENDING / S04 NOT YET FULLY ACCEPTED / S05 NOT STARTED"
+  }
+}

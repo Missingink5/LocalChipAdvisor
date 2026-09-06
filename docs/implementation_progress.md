@@ -592,3 +592,69 @@ test_recommendation.py）ruff 均 0 条。
 
 全仓库 lint/type 欠账与 S02.60 台账同源同类；S03 零新增，未扩展到无关清理。
 不能将 pytest 全绿写成“所有检查全绿”。
+
+## S04 完成记录（2026-09-06，agent 自检，未人审）
+
+**状态：S04 TECHNICAL DATASET COMPLETE / HUMAN REVIEW PENDING / S04 NOT YET
+FULLY ACCEPTED / S05 NOT STARTED**
+
+S04 交付内容（全部为新增文件，未改动任何既有代码/数据）：
+
+- `evaluations/corpus_manifest.json`：4 份官方 datasheet（MP4570 Rev.1.01
+  2017-01-04；TPS54331 SLVS839H 2023-10；TPS562201+TPS562208 SLVSD91D
+  2024-09；LT8610 Rev.D 2024-08），source_id + SHA-256 + 页数，哈希已逐文件
+  重算核对；`data/raw/` 下 PDF 本体由 .gitignore 排除，不入库。
+- `evaluations/topic_inventory.md`：21 主题 × 4 芯片 PRESENT/NOT_FOUND/
+  AMBIGUOUS 矩阵。逐行复核更正一处扫描漏报：MP4570 output_range 实为
+  PRESENT（P4 推荐工作条件行 1V to 0.9·VIN），初始标 NOT_FOUND 是关键词
+  扫描错误，已在清单与 manifest 中更正并注明。
+- `evaluations/cases/`：README、annotation_guide（数据契约：证据优先作者
+  顺序、alternative=OR/requirement=AND、split 硬规则、verbatim 伪影规范化
+  规则、评审门）、review_summary（人工评审材料）、dataset_manifest（计数）。
+- 数据规模：**普通 50 组 × 4 = 200 条（dev 30 组 / holdout 20 组）；
+  边界 10 组 × 4 = 40 条（dev 7 / holdout 3）；gold spans 79 条**；
+  状态分布 ANSWERED 208 / INSUFFICIENT_EVIDENCE 24 / NEEDS_CLARIFICATION 4 /
+  OUT_OF_SCOPE 4。
+- 首批 10 个语义组按指南锁死为 dev（validator 常量锁定组 ID，含防泄漏
+  断言）；holdout 未经人审批准保持 `holdout_sealed=false`。
+- `tests/test_s04_evaluation_dataset.py`：9 项确定性结构断言（无网络/无
+  模型/无 Chroma/无 Embedding），含 manifest 哈希落地校验、页码边界、无
+  chunk_id（chunk 映射留待 S05/S07）、组不跨 split、四语言齐备、无死 span、
+  human_reviewed 恒 false 门禁；S04.13 起按 dataset_manifest 核对最终计数。
+
+| 检查 | S04 实际结果 |
+|---|---|
+| 全套 pytest | **221 passed in 2.18s**（S03 基线 212 + S04 新增 9） |
+| S04 定向 pytest | 9 passed（每次数据变更后重跑） |
+| span verbatim 回查 | **79/79** 逐字命中原文提取（`D:\Cache\Temp\s04_verbatim_check.py`；空白归一 + 软连字符 U+00AD 伪影剔除后匹配；含 MP4570 原文笔误 "it will turns on"、"50%xRFF"、"25%xRFE" 逐字保留） |
+| ruff（tests+src） | 76 条 / 10 个文件 —— 与 S03 基线完全一致，**S04 零新增**（新文件单独检查 All checks passed） |
+| ruff（scripts/） | 15 条（smoke_mp4570 8、audit_baseline 6、smoke_models 1）—— S03 基线口径未含 scripts/，为既有债务，非 S04 引入 |
+| mypy src-only | 10 条 / 2 文件（cli.py、pdf_parser.py）—— 与 S02.60/S03 台账一致，S04 零新增 |
+| 文件卫生 | 12 个新文件全部 UTF-8 无 BOM、LF、无尾随空白（validator + 独立脚本双重检查） |
+| git diff --check | 通过（S04 新文件为 untracked，以文件卫生检查代替；tracked 文件 diff --check 通过） |
+| live catalog / MP4570 发布与评审状态 | 未改动（git status 确认，仅新增 untracked S04 文件与既有 9.6 文档） |
+
+### S04 期间发现并处理的问题（如实记录）
+
+1. `evaluations/` 原仅 .gitkeep；S04 全部文件为新增。
+2. MP4570 output_range 扫描漏报（见上）——已更正，并保留更正说明。
+3. TI/ADI 转储的提取伪影：行尾空格（rstrip）、断行软连字符 U+00AD
+   （LT8610 转储 "pre\xad vent"，需连同 CRLF 一并剔除）——规范化规则已写入
+   annotation_guide；verbatim 其余部分逐字一致。
+4. TPS54331 OVTP span 初稿超 400 字符上限，拆为两条互补 requirement
+   （purpose / thresholds），dev 组引用同步更新。
+5. 环境问题（与 S04 无关，仅记录）：`.pytest_cache\v\cache` ACL 拒绝访问，
+   pytest 出缓存警告但不影响结果；S04 定向运行用 `-p no:cacheprovider` 规避。
+6. TPS54331 转储确认无 "hiccup" 表述（grep 零命中），
+   `boundary.model_confusion.01` 的 INSUFFICIENT_EVIDENCE 判定据此成立。
+
+### 人工评审门（待用户）
+
+- 评审材料：`evaluations/cases/review_summary.md`（agent 自检清单 + 4 项
+  人工评审要点 + 批准流程）。
+- 用户批准前：全部 human_reviewed=false、holdout_sealed=false，状态表述
+  如上；未审核案例不得进入最终成绩（S16 口径）。
+- 用户批准后按 review_summary 第四节流程置位，再由人补评审记录。
+- **S05 未开始**：未建 knowledge.sqlite3、未做形式化分块、未装/运行
+  Chroma、未调 Ollama/Embedding、未做任何检索/问答接线。
+
