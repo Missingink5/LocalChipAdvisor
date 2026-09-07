@@ -15,8 +15,21 @@ def test_explicit_values_and_source_offsets():
     assert understand(query)["selection"]
 
 
-def test_correction_and_units():
-    assert params("不是3A是300mA") == {"iout_continuous": .3}
+def test_correction_with_role_keeps_continuous():
+    """A correction whose surrounding context already names the role is allowed."""
+    assert params("持续3A，不是3A，是300mA") == {"iout_continuous": .3}
+
+
+def test_correction_without_role_does_not_invent_continuous():
+    """Bare '不是3A是300mA' has no role; the parser must refuse to write
+    iout_continuous and must emit an ambiguity instead."""
+    result = understand("不是3A是300mA")
+    assert "iout_continuous" not in params("不是3A是300mA")
+    assert any("电流" in a for a in result["ambiguities"])
+
+
+def test_peak_correction_records_peak_not_continuous():
+    assert params("峰值不是3A，是300mA") == {"iout_peak": .3}
 
 
 def test_repeated_continuous_current_correction_uses_new_source():

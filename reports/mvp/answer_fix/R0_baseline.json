@@ -1,0 +1,41 @@
+{
+  "phase": "R0_baseline",
+  "captured": "2026-09-07",
+  "git_status_clean": true,
+  "pytest_count_before": 353,
+  "service_reproduction": {
+    "query": "MP4570 太热会自己停吗？",
+    "status": "MODEL_ERROR",
+    "message": "模型输出未通过处理：HTTPStatusError: Server error '500 Internal Server Error' for url 'http://127.0.0.1:11434/api/chat'",
+    "root_causes_observed": [
+      "固定 POLICY 禁止 free-text answer，仅以 JSON 选择 ID；Ollama 模型 qwen3.5:9b-q4_K_M 在严格结构输出下返回 500",
+      "message 字段是固定提示：'找到以下原文说明，请结合原文条件阅读。'",
+      "rendered_facts 仅识别 MP4570 过温/60V 两条原文模式，无法覆盖软启动、轻载、保护等其他问题",
+      "service.ask() 在无型号时直接 NEEDS_CLARIFICATION，丢失原始主题",
+      "current role 在纠正分支 '不是3A是300mA' 默认按持续电流处理（无角色证据）",
+      "会话状态未持久化；UI 端 st.session_state 只有 query/result/result_query 三键",
+      "Index.search() 对无型号查询仍要求 products 列表"
+    ]
+  },
+  "files_to_change": [
+    "src/local_chip_advisor/mvp/contracts.py (new)",
+    "src/local_chip_advisor/mvp/answer_validation.py (new)",
+    "src/local_chip_advisor/mvp/prompts.py (new)",
+    "src/local_chip_advisor/mvp/answering.py (new)",
+    "src/local_chip_advisor/mvp/conversation.py (new)",
+    "src/local_chip_advisor/mvp/understanding.py (modify: role fix)",
+    "src/local_chip_advisor/mvp/service.py (modify: handle_turn + ask compatibility)",
+    "mvp_app.py (modify: chat_message UI + new-session button)",
+    "scripts/ask_mvp.py (modify: --interactive)",
+    "scripts/evaluate_mvp.py (modify: per-claim audit)",
+    "scripts/smoke_mvp_conversation.py (new)",
+    "tests/test_mvp_*.py (modify/new)",
+    "docs/MVP_RUNBOOK.md (modify)",
+    "docs/MVP_PROGRESS.md (append)"
+  ],
+  "boundary_protections": [
+    "不动 domain/product_rules.py 工程阈值/产品发布状态",
+    "不动 sealed gold/holdout 数据集",
+    "不 commit/push"
+  ]
+}

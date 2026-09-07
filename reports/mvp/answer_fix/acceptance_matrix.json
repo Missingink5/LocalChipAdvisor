@@ -1,0 +1,32 @@
+{
+  "cases": [
+    {
+      "case_id": "mp4570_thermal_zh",
+      "language": "zh",
+      "query": "MP4570 太热会自己停吗？",
+      "follow_up": null,
+      "score": {
+        "passed": false,
+        "notes": [
+          "only 0 claims, expected >= 1",
+          "missing mention of '170'",
+          "missing mention of '160'"
+        ]
+      },
+      "turns": [
+        {
+          "input": "MP4570 太热会自己停吗？",
+          "status": "RETRIEVAL_ERROR",
+          "answer_text": "",
+          "message": "检索失败：RuntimeError: 检索失败：ReadTimeout: timed out",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [],
+          "elapsed_seconds": 187.416,
+          "clarification": null
+        }
+      ]
+    }
+  ]
+}

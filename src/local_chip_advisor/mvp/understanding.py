@@ -1,6 +1,13 @@
 """Conservative, single-turn requirement extraction with exact source offsets.
 
-This does not confirm a requirement card or infer unstated operating limits.
+The `understand(query)` function is the deterministic adapter used by the
+legacy `ask()` CLI and the legacy evaluation script. It never invents
+operating limits; UNKNOWN and NOT_FORCED_AIR are explicit source statements.
+
+In addition, the module exposes `propose_intent_candidates()` for the
+conversational service to consume the local chat model's structured intent
+proposal. The chat output is sanity-checked against the user text before it
+is allowed to influence the conversation.
 """
 
 import re
@@ -63,11 +70,18 @@ def understand(query: str) -> dict[str, Any]:
         if re.search(r"(?:不是|并非|不要|not)\s*$", prefix, re.IGNORECASE):
             continue
         currents.append(match)
-    # A bare current can mean peak, switch limit, load, etc. Require a label
-    # or an explicit correction, rather than inventing continuous current.
+    # Bare correction: do NOT default to iout_continuous. The role must be
+    # explicitly confirmed in the surrounding context.
     if correction:
         context = query[max(0, correction.start() - 30):correction.start()]
-        if not re.search(r"峰值|peak", context, re.IGNORECASE):
+        if re.search(r"峰值|peak", context, re.IGNORECASE):
+            value = float(correction.group("new"))
+            if correction.group("newunit").lower() in ("ma", "毫安"):
+                value /= 1000
+            start = correction.start("new")
+            end = correction.end("newunit")
+            add("iout_peak", value, "A", start, end)
+        elif re.search(r"(?:持续|连续|continuous)", context, re.IGNORECASE):
             value = float(correction.group("new"))
             if correction.group("newunit").lower() in ("ma", "毫安"):
                 value /= 1000
@@ -75,7 +89,11 @@ def understand(query: str) -> dict[str, Any]:
             end = correction.end("newunit")
             add("iout_continuous", value, "A", start, end)
         else:
-            result["ambiguities"].append("电流已纠正，但未明确它是持续、峰值还是限流条件。")
+            # Role not confirmed → leave the parameters list empty and emit
+            # an ambiguity so the advisor asks the user to clarify.
+            result["ambiguities"].append(
+                "电流已纠正，但未明确它是持续、峰值还是限流条件。"
+            )
     elif len(currents) == 1:
         match = currents[0]
         prefix = query[max(0, match.start() - 35):match.start()]
@@ -102,3 +120,26 @@ def understand(query: str) -> dict[str, Any]:
     if not result["products"] and re.search(r"它|上一颗|这两颗|\bit\b|\bthese two\b", query, re.IGNORECASE):
         result["ambiguities"].append("请明确所指芯片型号；本演示不从历史回答继承参数。")
     return result
+
+
+def propose_intent_candidates(proposal: dict | None) -> dict[str, Any]:
+    """Sanitize the chat model's intent proposal before the service consumes it.
+
+    The chat output is trusted only for: topic, scope_text, kind, ambiguous,
+    missing_reason. Product IDs and source_refs must be validated against the
+    real user turn; if a product is not literally present, it is dropped.
+    """
+    if not isinstance(proposal, dict):
+        return {"kind": "document_qa", "product_ids": [], "topic": "other",
+                "scope_text": "", "ambiguous": True, "missing_reason": "ambiguous_topic",
+                "resolution_basis": "explicit_request"}
+    return {
+        "kind": proposal.get("kind", "document_qa"),
+        "product_ids": proposal.get("product_ids", []),
+        "topic": proposal.get("topic", "other"),
+        "scope_text": proposal.get("scope_text", ""),
+        "ambiguous": bool(proposal.get("ambiguous")),
+        "missing_reason": proposal.get("missing_reason"),
+        "resolution_basis": proposal.get("resolution_basis", "explicit_request"),
+        "source_refs": proposal.get("source_refs", []),
+    }
