@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from local_chip_advisor.knowledge.models import (
-    ChunkLinkKind,
-    ChunkQuality,
     KNOWLEDGE_SCHEMA_VERSION,
     PARSER_VERSION,
     SNAPSHOT_STATUS_BUILDING,
+    ChunkLinkKind,
+    ChunkQuality,
     SegmentType,
     derive_chunk_id,
     derive_doc_id,
@@ -26,6 +24,19 @@ def test_derive_doc_id_is_stable_and_normalises_source_id() -> None:
     doc_id = derive_doc_id("mps-mp4570-datasheet", "A" * 64)
 
     assert doc_id == "doc:mps-mp4570-datasheet:aaaaaaaaaaaa"
+
+
+def test_derive_doc_id_changes_when_sha_changes() -> None:
+    first = derive_doc_id(
+        "mps-mp4570-datasheet",
+        "A" * 64,
+    )
+    second = derive_doc_id(
+        "mps-mp4570-datasheet",
+        "B" * 64,
+    )
+
+    assert first != second
 
 
 def test_derive_doc_id_rejects_empty_source_id() -> None:
@@ -149,6 +160,20 @@ def test_derive_snapshot_id_changes_with_parser_version() -> None:
         corpus_id="c",
         manifest_sha256="A" * 64,
         parser_version="pdf-parser-v9",
+    )
+
+    assert base != other
+
+
+def test_derive_snapshot_id_changes_with_chunker_version() -> None:
+    base = derive_snapshot_id(
+        corpus_id="c",
+        manifest_sha256="A" * 64,
+    )
+    other = derive_snapshot_id(
+        corpus_id="c",
+        manifest_sha256="A" * 64,
+        chunker_version="structure-chunker-v9",
     )
 
     assert base != other

@@ -24,7 +24,6 @@ import json
 import re
 import sqlite3
 import sys
-from collections import Counter
 from pathlib import Path
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
@@ -173,50 +172,6 @@ def _build_map(
             }
         )
     return rows
-
-
-def _classify_gaps(rows: list[dict[str, object]], con: sqlite3.Connection) -> dict[str, str]:
-    """Classify each unmatched span as CHUNKER_GAP or TEXT_DRIFT.
-
-    The structural chunker holds the page text verbatim, so when the
-    gold verbatim does not appear on the candidate page at all we record
-    ``TEXT_DRIFT`` (the gold span's text does not match the PDF text on
-    that page). When ≥70% of the verbatim's words DO appear but the
-    verbatim string itself doesn't, we record ``CHUNKER_GAP`` — meaning
-    the chunker kept fragments of the span but did not co-locate them
-    in one chunk.
-    """
-
-    classification: dict[str, str] = {}
-    for row in rows:
-        if row["chunk_id"] is not None:
-            continue
-        doc_id = row["doc_id"]
-        if not doc_id:
-            classification[str(row["span_id"])] = "TEXT_DRIFT"
-            continue
-        ps = int(row["pdf_page_start"] or 0)
-        pe = int(row["pdf_page_end"] or ps)
-        # Recover verbatim text by re-reading from the gold file in caller;
-        # easier: re-read from the spans file referenced via span_id.
-        # We use the chunks on the candidate page instead.
-        candidate_texts = [
-            r[0]
-            for r in con.execute(
-                "SELECT raw_text FROM chunks WHERE doc_id=? AND page_start<=? AND page_end>=?",
-                (doc_id, pe, ps),
-            )
-        ]
-        joined = _normalize(" ".join(candidate_texts))
-        # Recover verbatim via span_id lookup
-        # The classify function is called with access to the original spans.
-        # For simplicity we just use heuristic: if the joined candidate text
-        # is short (< 200 chars), it's classified TEXT_DRIFT.
-        if len(joined) < 200:
-            classification[str(row["span_id"])] = "TEXT_DRIFT"
-        else:
-            classification[str(row["span_id"])] = "CHUNKER_GAP"
-    return classification
 
 
 def _coverage_summary(rows: list[dict[str, object]]) -> dict[str, object]:
