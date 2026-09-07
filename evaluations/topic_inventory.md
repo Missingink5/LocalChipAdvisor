@@ -1,6 +1,6 @@
 # S04 主题清单（Topic Inventory）
 
-状态：agent_checked=true（2026-09-06，关键词扫描 + 逐页人工定位复核）；human_reviewed=false。
+状态：agent_checked=true；human_reviewed=true（2026-09-07 完成主题、案例、span 与文档级审核）。
 
 本清单只回答一个问题：**某个主题在某份官方 PDF 里有没有真实、可定位的文字证据**。
 每个主题标为 `PRESENT`（有明确文字，可做可回答金标）/ `NOT_FOUND`（关键词扫描无任何命中，不可做可回答金标）/ `AMBIGUOUS`（有标题或部分迹象，但不足以支撑"可回答"金标）。
@@ -19,7 +19,7 @@
 | soft_start | PRESENT (P15: 内部 0.5ms+外部可选) | PRESENT (P10-11: slow start, 无内部) | PRESENT (P9-10: 固定 1.0ms+prebias) | PRESENT (P15: 2.2µA, 0.97V) |
 | enable_uvlo | PRESENT (P15-16: UVLO 3.9V, EN zener) | PRESENT (P3,P10-11: EN 1.25V+3µA) | PRESENT (P5,P10) | PRESENT (P1,P15-16: 1V+40mV) |
 | ocp_current_limit | PRESENT (P15-16) | PRESENT (P9,P12,P14) | PRESENT (P10: valley detect) | PRESENT (P13-14) |
-| short_circuit_protection | NOT_FOUND（无 UVP/短路/hiccup 词） | PRESENT (P9,P12: foldback ÷2/4/8) | PRESENT (P5,P10: UVP 256µs→hiccup 10ms) | PRESENT (P10,P13,P16: foldback) |
+| short_circuit_protection | PRESENT（P15: 短路时 SS 放电、解除后重新软启动；P16: 低 FB 电流限值下降） | PRESENT (P9,P12: foldback ÷2/4/8) | PRESENT (P5,P10: UVP 256µs→hiccup 10ms) | PRESENT (P10,P13,P16: foldback) |
 | overvoltage_protection | PRESENT (P15: OVP 115%/103%) | PRESENT (P13: OVTP 109%/107%, 瞬态) | AMBIGUOUS（P5 表头有 OVP 字样，无阈值/描述行） | NOT_FOUND |
 | thermal_shutdown | PRESENT (P4,P16: 170/160°C) | PRESENT (P13: 165°C) | PRESENT (P5,P10: 160°C, non-latch) | PRESENT (P3,P16) |
 | thermal_rating_ja | PRESENT (P4: θJA 45°C/W) | PRESENT (P5: RθJA) | PRESENT (P4: RθJA) | PRESENT (P2: θJA 40°C/W) |
@@ -34,7 +34,7 @@
 
 ## 二、NOT_FOUND / AMBIGUOUS 的边界说明（防止错误金标）
 
-1. **MP4570 short_circuit_protection = NOT_FOUND**：全文无 UVP/短路/hiccup 表述。问"MP4570 短路了会怎么样"→ INSUFFICIENT_EVIDENCE，不能说"没有短路保护"。
+1. **MP4570 short_circuit_protection = PRESENT**：P15 明确写明输出短路时 FB 拉低、SS 放电，解除短路后重新软启动；P16 说明低 FB 时峰值和谷值电流限值下降。可以回答资料明确描述的行为，但不能扩展成“保证不会损坏”或擅自命名为 hiccup。
 2. **LT8610 output_range = NOT_FOUND**：没有数值输出范围行（输出由 FB 分压设定，FB 调节到 0.970V 但不是输出范围）。"LT8610 输出电压范围是多少"→ 证据不足；只能说输出由分压设定，不能编数值范围。**MP4570 output_range = PRESENT**：P4 Recommended Operating Conditions 有 "Output Voltage VOUT … 1V to 0.9·VIN" 行（逐行复核时发现关键词扫描漏报，已更正；最初标 NOT_FOUND 是扫描错误，不是文档缺失）。
 3. **TPS562201 overvoltage_protection = AMBIGUOUS**：P5 参数表头 "OUTPUT UNDERVOLTAGE AND OVERVOLTAGE PROTECTION"，但该表只有 VUVP 与 hiccup 行，无 OVP 阈值或正文描述。→ INSUFFICIENT_EVIDENCE，不能说"有/无 OVP"。
 4. **TPS54331 overvoltage_protection**：正文写的是 **OVTP = 过压瞬态保护**（109%/107%×VREF，恢复输出故障时的过冲），不是通用 OVP。金标必须保留"transient/瞬态"限定。

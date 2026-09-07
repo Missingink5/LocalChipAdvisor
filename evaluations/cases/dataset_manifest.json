@@ -11,13 +11,19 @@
     "boundary_groups_dev": 7,
     "boundary_groups_holdout": 3,
     "boundary_cases": 40,
-    "gold_spans": 79
+    "gold_spans": 83
   },
   "review": {
     "agent_checked": true,
-    "agent_check_notes": "Structural invariants enforced by tests/test_s04_evaluation_dataset.py; 79/79 spans verbatim-matched against the source PDF extractions; page anchors verified from page-marked dumps. See review_summary.md.",
-    "human_reviewed": false,
-    "holdout_sealed": false,
-    "status": "S04 TECHNICAL DATASET COMPLETE / HUMAN REVIEW PENDING / S04 NOT YET FULLY ACCEPTED / S05 NOT STARTED"
+    "agent_check_notes": "Structural invariants enforced by tests/test_s04_evaluation_dataset.py; 83/83 spans verbatim-matched on their declared physical PDF pages. See review_summary.md and human_review.json.",
+    "human_reviewed": true,
+    "reviewed_normal_groups": 50,
+    "reviewed_boundary_groups": 10,
+    "reviewed_cases": 240,
+    "reviewed_spans": 83,
+    "reviewed_documents": 4,
+    "holdout_sealed": true,
+    "sealed_date": "2026-09-07",
+    "status": "S04 FULLY ACCEPTED / 60 GROUPS + 240 CASES + 83 SPANS + 4 DOCUMENTS HUMAN REVIEWED / HOLDOUT SEALED / S05 NOT STARTED"
   }
 }

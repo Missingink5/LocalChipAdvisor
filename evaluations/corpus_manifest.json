@@ -5,7 +5,7 @@
   "created_date": "2026-09-06",
   "notes": [
     "Each sha256 and pdf_pages value was recomputed from the local PDF on 2026-09-06; source_verified=true means the file on disk matches the recorded hash, not that human review has approved the content.",
-    "human_reviewed is false for every document until the user explicitly approves the S04.12 review gate.",
+    "All four documents were human-approved on 2026-09-07 after official-domain URL, product, revision, local page count, and SHA-256 review.",
     "Themes present per document mirror topic_inventory.md PRESENT cells. AMBIGUOUS/NOT_FOUND themes carry no gold-answerable claims.",
     "The TPS562201 datasheet (SLVSD91D) is a family sheet covering TPS562201 and TPS562208; product-scoped gold spans must bind to the exact product the claim is about."
   ],
@@ -25,7 +25,7 @@
       "sha256": "A89DA141CB7C372B51C8D5B0330292F2372789DA7D4CC3E4C725F0B7D58D7453",
       "pdf_pages": 22,
       "source_verified": true,
-      "human_reviewed": false,
+      "human_reviewed": true,
       "themes_present": [
         "input_range",
         "output_range",
@@ -49,7 +49,7 @@
       "notes": [
         "SKU MP4570GF-Z is the packaged variant of product MP4570; S04 queries bind to the canonical product id MP4570.",
         "Datasheet states wide 4.5V-55V input range with 60V absolute maximum; P4 Recommended Operating Conditions gives Output Voltage VOUT = 1V to 0.9*VIN (output_range theme PRESENT, corrected after line-level review of P4).",
-        "No dedicated EMI section and no UVP/hiccup wording found by keyword sweep - see topic_inventory.md."
+        "No dedicated EMI section or hiccup terminology was found. Output-short behavior is nevertheless PRESENT: P15 describes SS discharge/restart and P16 describes FB-dependent current-limit reduction."
       ]
     },
     {
@@ -67,7 +67,7 @@
       "sha256": "CF72DFD0AC69EEC645B7B493DE628DC1C3AA66F5F925A2EA9BE6BB5C38260730",
       "pdf_pages": 41,
       "source_verified": true,
-      "human_reviewed": false,
+      "human_reviewed": true,
       "themes_present": [
         "input_range",
         "output_current",
@@ -91,7 +91,7 @@
         "TI datasheet SLVS839H; first issue July 2008, latest revision October 2023 (the revision date is recorded as document_date).",
         "Soft-start is documented with the term 'slow start' (adjustable via external SS capacitor, 1-10 ms, CSS <= 27 nF); the device has no internal slow-start time.",
         "Protection family differs from the other chips: OVTP is an overvoltage *transient* protection (109%/107% of VREF), short-circuit handling is frequency foldback (divide-by-2/4/8) - do not paraphrase as a general OVP/hiccup scheme.",
-        "No power-good output; no external clock synchronization (fixed 570-kHz oscillator)."
+        "No power-good or external-clock synchronization description was located in this revision; absence-oriented cases must report NOT_FOUND/INSUFFICIENT_EVIDENCE rather than assert nonexistence."
       ]
     },
     {
@@ -109,7 +109,7 @@
       "sha256": "4D91078168C00C53C93F470AD1BE0AAA9B4FD2799780C847BC2289E78CBB8503",
       "pdf_pages": 28,
       "source_verified": true,
-      "human_reviewed": false,
+      "human_reviewed": true,
       "themes_present": [
         "input_range",
         "output_range",
@@ -131,7 +131,7 @@
       "notes": [
         "Family sheet covers TPS562201 (pulse-skip / Advanced Eco-mode) and TPS562208 (FCCM continuous mode); the two differ in light-load behavior and shutdown-related specs, so product binding matters in gold.",
         "The spec table section header says 'OUTPUT UNDERVOLTAGE AND OVERVOLTAGE PROTECTION' but contains only VUVP/hiccup rows - no output-overvoltage threshold or description exists in this revision, so overvoltage_protection is AMBIGUOUS (header-only) and must not yield answerable gold.",
-        "No power-good output and no external clock synchronization pin (D-CAP2 adaptive on-time, quasi-fixed ~580 kHz).",
+        "No power-good or external-clock synchronization description was located in this revision; absence alone must not be promoted to a positive nonexistence claim.",
         "Dedicated EMI discussion is absent; only the layout guideline about radiated emissions exists (see layout_guidelines)."
       ]
     },
@@ -150,7 +150,7 @@
       "sha256": "E0E572633FB862640A46B869380F1B23DC79BBCB6BE061DF051B16867DAA440D",
       "pdf_pages": 22,
       "source_verified": true,
-      "human_reviewed": false,
+      "human_reviewed": true,
       "themes_present": [
         "input_range",
         "output_current",

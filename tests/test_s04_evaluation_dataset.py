@@ -16,16 +16,15 @@ Hard rules enforced here (see evaluations/cases/annotation_guide.md):
   dev/holdout and across normal/boundary files;
 - normal semantic groups carry exactly the four language expressions;
 - the first ten semantic groups are permanently dev (locked id constant);
-- human_reviewed is false everywhere until the user explicitly approves.
+- case/span/document human_reviewed fields match the explicit review inventory.
 
 Final-count assertions (50 groups / 200 cases / 40 boundary cases, 30/20 split)
 are gated on evaluations/cases/dataset_manifest.json, which is only created at
 S04.13. Before that, the structural invariants above must already be green.
 
-Unlock procedure after the user's S04.12 review: replace the
-human_reviewed-is-false assertions with the reviewed inventory recorded in the
-review record (a reviewed case/span id must appear there); the same applies to
-holdout_sealed, which stays false until the user explicitly approves sealing.
+After S04.12 review, the explicit review inventory is the authority for every
+case, span, and document flag. Final acceptance additionally requires all
+records reviewed and holdout_sealed=true.
 
 This test performs no network, model, Chroma, or embedding calls.
 """
@@ -45,6 +44,7 @@ CASES_DIR = EVAL_DIR / "cases"
 MANIFEST_PATH = EVAL_DIR / "corpus_manifest.json"
 DATASET_MANIFEST_PATH = CASES_DIR / "dataset_manifest.json"
 SEMANTIC_SCOPE_REVIEW_PATH = CASES_DIR / "semantic_scope_review.json"
+HUMAN_REVIEW_PATH = CASES_DIR / "human_review.json"
 
 CASE_FILES = {
     "dev": CASES_DIR / "dev.jsonl",
@@ -107,15 +107,8 @@ FIRST_TEN_DEV_GROUP_IDS = (
 
 NO_CHANGE_SCOPE_GROUP_IDS = frozenset(
     {
-        "lt8610.frequency.01",
         "mp4570.output_set.01",
-        "mp4570.power_good.01",
-        "mp4570.uvlo.01",
-        "tps54331.frequency.01",
         "tps54331.vout_set.01",
-        "tps562201.ocl.01",
-        "tps562201.uvlo.01",
-        "tps562201.uvp.01",
     }
 )
 CORRECTED_SCOPE_GROUP_IDS = frozenset(
@@ -123,6 +116,7 @@ CORRECTED_SCOPE_GROUP_IDS = frozenset(
         "lt8610.burst.01",
         "lt8610.en_uv.01",
         "lt8610.foldback.01",
+        "lt8610.frequency.01",
         "lt8610.ilim.01",
         "lt8610.pg.01",
         "lt8610.quiescent.01",
@@ -136,14 +130,17 @@ CORRECTED_SCOPE_GROUP_IDS = frozenset(
         "mp4570.light_load.01",
         "mp4570.ocp.01",
         "mp4570.output_range.01",
+        "mp4570.power_good.01",
         "mp4570.ovp.01",
         "mp4570.soft_start.01",
         "mp4570.sync.01",
         "mp4570.thermal_resistance.01",
         "mp4570.thermal_shutdown.01",
+        "mp4570.uvlo.01",
         "tps54331.boot.01",
         "tps54331.emc.01",
         "tps54331.en.01",
+        "tps54331.frequency.01",
         "tps54331.iq.01",
         "tps54331.layout.01",
         "tps54331.light_load.01",
@@ -157,9 +154,12 @@ CORRECTED_SCOPE_GROUP_IDS = frozenset(
         "tps562201.frequency.01",
         "tps562201.input_range.01",
         "tps562201.layout.01",
+        "tps562201.ocl.01",
         "tps562201.shutdown_current.01",
         "tps562201.soft_start.01",
         "tps562201.tsd.01",
+        "tps562201.uvlo.01",
+        "tps562201.uvp.01",
         "tps562201.vfb_accuracy.01",
     }
 )
@@ -245,6 +245,22 @@ def _read_dataset_manifest() -> dict[str, object] | None:
     return obj
 
 
+def _read_human_review() -> dict[str, object]:
+    obj = json.loads(HUMAN_REVIEW_PATH.read_bytes().decode("utf-8"))
+    assert isinstance(obj, dict), "human_review.json: not a JSON object"
+    return obj
+
+
+def _reviewed_ids() -> tuple[set[str], set[str]]:
+    review = _read_human_review()
+    groups: set[str] = set()
+    spans: set[str] = set()
+    for batch in review["batches"]:
+        groups.update(batch["semantic_group_ids"])
+        spans.update(batch["span_ids"])
+    return groups, spans
+
+
 def _normalize_pdf_verbatim(text: str) -> str:
     """Normalize only the documented PDF soft-hyphen extraction artifact."""
 
@@ -261,7 +277,7 @@ def test_s04_files_exist_and_are_wellformed_jsonl() -> None:
     """Manifest and all five case/span files exist and parse as clean JSONL."""
 
     assert EVAL_DIR.is_dir()
-    for path in [MANIFEST_PATH, SPAN_FILE, *CASE_FILES.values()]:
+    for path in [MANIFEST_PATH, SPAN_FILE, HUMAN_REVIEW_PATH, *CASE_FILES.values()]:
         assert path.is_file(), f"missing {path.relative_to(REPO_ROOT)}"
     # parse everything; _read_jsonl/_read_manifest raise on hygiene violations
     manifest, spans, cases = _load_all()
@@ -278,6 +294,8 @@ def test_s04_corpus_manifest_hashes_resolve_to_local_pdfs() -> None:
     """Every recorded document exists on disk and its sha256 matches exactly."""
 
     manifest = _read_manifest()
+    document_review = _read_human_review()["document_review"]
+    reviewed_source_ids = set(document_review["source_ids"])
     assert manifest.get("schema_version") == 1, "schema_version must be 1"
     assert manifest.get("corpus_id") == "s04-corpus-v1"
     for doc in _documents(manifest).values():
@@ -294,7 +312,9 @@ def test_s04_corpus_manifest_hashes_resolve_to_local_pdfs() -> None:
         actual = hashlib.sha256(path.read_bytes()).hexdigest().upper()
         assert actual == sha, f"sha256 mismatch for {local_file}"
         reviewed = doc.get("human_reviewed")
-        assert reviewed is False, f"{doc['source_id']}: human_reviewed must stay false"
+        assert reviewed is (doc["source_id"] in reviewed_source_ids), (
+            f"{doc['source_id']}: human_reviewed does not match review inventory"
+        )
 
 
 # ---------------------------------------------------------------- spans
@@ -306,6 +326,7 @@ def test_s04_gold_spans_contract() -> None:
     manifest = _read_manifest()
     docs = _documents(manifest)
     spans = _read_jsonl(SPAN_FILE)
+    _, reviewed_span_ids = _reviewed_ids()
     seen: set[str] = set()
     for span in spans:
         assert set(span) == SPAN_FIELDS, f"span field set mismatch: {span.get('span_id')}"
@@ -329,7 +350,9 @@ def test_s04_gold_spans_contract() -> None:
         assert len(text) <= 400, f"{span_id}: verbatim_text too long"
         assert isinstance(span["section"], str) and span["section"]
         assert isinstance(span["required_qualifiers"], list)
-        assert span["human_reviewed"] is False, f"{span_id}: human_reviewed must be false"
+        assert span["human_reviewed"] is (span_id in reviewed_span_ids), (
+            f"{span_id}: human_reviewed does not match review inventory"
+        )
 
 
 def test_s04_gold_spans_are_verbatim_on_declared_physical_pages() -> None:
@@ -391,6 +414,7 @@ def test_s04_case_records_contract_and_split_consistency() -> None:
     """Case field sets, split matches its file, and ids are globally unique."""
 
     _, spans, cases = _load_all()
+    reviewed_group_ids, _ = _reviewed_ids()
     seen: set[str] = set()
     for name, records in cases.items():
         expected_split = FILE_SPLIT[name]
@@ -415,7 +439,9 @@ def test_s04_case_records_contract_and_split_consistency() -> None:
                 assert allowed, f"{case_id}: allowed_product_ids empty"
             assert isinstance(case["required_qualifiers"], list), case_id
             assert isinstance(case["forbidden_claims"], list), case_id
-            assert case["human_reviewed"] is False, f"{case_id}: human_reviewed must be false"
+            assert case["human_reviewed"] is (
+                case["semantic_group_id"] in reviewed_group_ids
+            ), f"{case_id}: human_reviewed does not match review inventory"
             # evidence requirements point at spans, one requirement id each
             req_ids: set[str] = set()
             for req in case["gold_evidence_requirements"]:
@@ -460,6 +486,82 @@ def test_s04_semantic_groups_never_cross_split() -> None:
                 group_kind[gid] = kind
 
 
+def test_s04_human_review_inventory_is_bounded_and_traceable() -> None:
+    """Only explicitly approved groups and their used spans may be marked reviewed."""
+
+    review = _read_human_review()
+    assert set(review) == {
+        "schema_version",
+        "dataset_id",
+        "batches",
+        "document_review",
+    }
+    assert review["schema_version"] == 1
+    assert review["dataset_id"] == "s04-eval-v1"
+    batches = review["batches"]
+    assert isinstance(batches, list) and batches
+
+    manifest, spans, cases = _load_all()
+    all_span_ids = {span["span_id"] for span in spans}
+    all_group_ids = {
+        case["semantic_group_id"] for records in cases.values() for case in records
+    }
+    seen_review_ids: set[str] = set()
+    seen_groups: set[str] = set()
+    seen_spans: set[str] = set()
+    for batch in batches:
+        assert set(batch) == {
+            "review_id",
+            "reviewed_date",
+            "reviewer",
+            "basis",
+            "semantic_group_ids",
+            "span_ids",
+        }
+        review_id = batch["review_id"]
+        assert isinstance(review_id, str) and review_id not in seen_review_ids
+        seen_review_ids.add(review_id)
+        assert batch["reviewed_date"] == "2026-09-07"
+        assert batch["reviewer"] == "project_owner"
+        assert isinstance(batch["basis"], str) and batch["basis"].strip()
+        group_ids = batch["semantic_group_ids"]
+        span_ids = batch["span_ids"]
+        assert isinstance(group_ids, list) and group_ids
+        assert isinstance(span_ids, list) and span_ids
+        assert len(group_ids) == len(set(group_ids))
+        assert len(span_ids) == len(set(span_ids))
+        assert seen_groups.isdisjoint(group_ids), "group reviewed in multiple batches"
+        assert seen_spans.isdisjoint(span_ids), "span reviewed in multiple batches"
+        seen_groups.update(group_ids)
+        seen_spans.update(span_ids)
+
+    assert seen_groups <= all_group_ids
+    assert seen_spans <= all_span_ids
+    reviewed_cases = [
+        case
+        for records in cases.values()
+        for case in records
+        if case["semantic_group_id"] in seen_groups
+    ]
+    assert len(reviewed_cases) == len(seen_groups) * len(LANGUAGE_GROUPS)
+    assert _span_ids_by_case(reviewed_cases) == seen_spans
+    document_review = review["document_review"]
+    assert set(document_review) == {
+        "review_id",
+        "reviewed_date",
+        "reviewer",
+        "basis",
+        "source_ids",
+    }
+    assert document_review["review_id"] == "s04-document-review-01"
+    assert document_review["reviewed_date"] == "2026-09-07"
+    assert document_review["reviewer"] == "project_owner"
+    assert isinstance(document_review["basis"], str) and document_review["basis"].strip()
+    source_ids = document_review["source_ids"]
+    assert isinstance(source_ids, list) and len(source_ids) == len(set(source_ids))
+    assert set(source_ids) == set(_documents(manifest))
+
+
 def test_s04_normal_groups_have_all_four_language_expressions() -> None:
     """Every normal semantic group carries exactly the four expressions."""
 
@@ -475,12 +577,12 @@ def test_s04_normal_groups_have_all_four_language_expressions() -> None:
 
 
 def test_s04_semantic_scope_technical_pre_review_inventory() -> None:
-    """Technical scope review covers every normal group without human approval."""
+    """Technical scope inventory covers every normal group and records final approval."""
 
     assert SEMANTIC_SCOPE_REVIEW_PATH.is_file(), "semantic scope review missing"
     review = json.loads(SEMANTIC_SCOPE_REVIEW_PATH.read_text(encoding="utf-8"))
     assert review["review_kind"] == "technical_pre_review"
-    assert review["human_reviewed"] is False
+    assert review["human_reviewed"] is True
     entries = review["groups"]
     assert isinstance(entries, list)
     assert all(
@@ -517,7 +619,7 @@ def test_s04_semantic_scope_technical_pre_review_inventory() -> None:
         if disposition == "no_change"
     } == NO_CHANGE_SCOPE_GROUP_IDS
     assert all(entry["scope_summary"].strip() for entry in entries)
-    assert all(entry["human_reviewed"] is False for entry in entries)
+    assert all(entry["human_reviewed"] is True for entry in entries)
 
 
 def test_s04_first_ten_groups_stay_dev_forever() -> None:
@@ -555,7 +657,7 @@ def test_s04_dataset_manifest_counts_when_present() -> None:
     dataset_manifest = _read_dataset_manifest()
     if dataset_manifest is None:
         return  # S04.13 not reached yet: final counts are not asserted
-    _, spans, cases = _load_all()
+    manifest, spans, cases = _load_all()
     normal_dev = [c for c in cases["dev"]]
     normal_holdout = [c for c in cases["holdout"]]
     boundary = [c for c in (*cases["boundary_dev"], *cases["boundary_holdout"])]
@@ -581,6 +683,10 @@ def test_s04_dataset_manifest_counts_when_present() -> None:
     assert computed["boundary_cases"] == 40, "boundary cases must be 40"
     review = dataset_manifest.get("review")
     assert isinstance(review, dict), "dataset_manifest.json: review missing"
-    assert review.get("holdout_sealed") is False, "holdout may not be sealed pre-review"
-    assert review.get("human_reviewed") is False, "human_reviewed must stay false"
+    assert review.get("holdout_sealed") is True, "holdout must be sealed after review"
+    assert review.get("human_reviewed") is True, "dataset review must be complete"
+    assert all(case["human_reviewed"] is True for records in cases.values() for case in records)
+    assert all(span["human_reviewed"] is True for span in spans)
+    assert all(doc["human_reviewed"] is True for doc in _documents(manifest).values())
+    assert "S04 FULLY ACCEPTED" in review.get("status", "")
     assert "S05 NOT STARTED" in review.get("status", ""), "status must not claim S05"

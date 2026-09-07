@@ -14,6 +14,7 @@ S04 的目标产物：为文档问答建立**小语料 + 分组金标**。本目
 | `boundary_dev.jsonl` / `boundary_holdout.jsonl` | 边界案例：无答案 / 歧义 / 错误型号 / 否定 / 绝对最大值混淆等（目标 10 组 × 4 = 40 条） |
 | `annotation_guide.md` | 完整数据契约：字段、作者顺序、split 规则、质量优先级 |
 | `dataset_manifest.json` | S04.13 才生成：validator 算出的计数 + 评审状态（`holdout_sealed=false` 直到用户审核批准） |
+| `human_review.json` | 用户实际审核批次：审核人、日期、依据、已批准语义组与证据 ID；validator 用它约束 `human_reviewed` 标记 |
 | `tests/test_s04_evaluation_dataset.py` | 确定性结构校验器（无网络/无模型/无 Chroma），全量测试套件的一部分 |
 
 ## 快速校验
@@ -26,11 +27,12 @@ S04 的目标产物：为文档问答建立**小语料 + 分组金标**。本目
 
 1. **语义组绝不跨 split**：同一语义组的 4 种问法必须全部在同一 split；
    首批 10 组永久属于 dev，绝不挪入 holdout（validator 用常量锁定）。
-2. **human_reviewed 在用户明确审核前恒为 false**：validator 强制执行；
-   用户批准后按测试文件里的说明更新门禁，并由人补评审记录。
+2. **human_reviewed 必须有审核清单依据**：用户明确批准前为 false；批准后只有
+   `human_review.json` 所列语义组和 span 可以为 true，validator 强制两者精确对应。
 
 ## 状态
 
 - 2026-09-06：目录与契约建立；语料 4 份（MP4570 / TPS54331 / TPS562201+TPS562208 / LT8610）。
-- 评审状态：见 `dataset_manifest.json`（S04.13 起）。在用户审核前，
-  状态恒为 **S04 TECHNICAL DATASET COMPLETE / HUMAN REVIEW PENDING / S04 NOT YET FULLY ACCEPTED / S05 NOT STARTED**。
+- 评审状态：见 `dataset_manifest.json`。2026-09-07 共完成 7 个案例审核批次
+  和 1 个文档审核批次：50 个普通组、10 个边界组、240 cases、83 spans、
+  4 份文档全部通过，holdout 已封存；S04 fully accepted，S05 未开始。

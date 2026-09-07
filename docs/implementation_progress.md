@@ -708,3 +708,142 @@ S04 交付内容（全部为新增文件，未改动任何既有代码/数据）
 状态表述不变：**S03 修订完成待验收；S04 TECHNICAL DATASET COMPLETE /
 HUMAN REVIEW PENDING / S04 NOT YET FULLY ACCEPTED / S05 NOT STARTED**。
 human_reviewed 与 holdout_sealed 仍全部 false，等待人工验收。
+
+## S04 第二轮逐条语义返修（2026-09-07）
+
+独立复核确认，`semantic_scope_review.json` 的集合门禁只能证明每组被登记，
+不能证明四种 query 真正覆盖相同证据负担。针对仍存在的多问、少问、条件
+遗漏和概念扩大，本轮继续逐条返修：
+
+- 相对 `937c917`，32 个语义组共 125 条 query 更新；程序复核确认 case 的
+  ID、split、状态、意图、产品范围、gold evidence、限定条件、禁语和
+  `human_reviewed` 均未改变；
+- 问法显式对齐各组的完整范围，例如阈值+迟滞+浮空、同步频率+逻辑电平、
+  逐周期限流+频率折返、触发+恢复、25°C 条件和具体布局对象；
+- 修正 Buck 场景中“开机升压”等不准确口语，并删除“会不会烧”“散热好不好”
+  这类现有证据无法支持的安全或性能评价；
+- 技术预审分类更新为 corrected 48 组 / no_change 2 组；该状态仍不是人工批准；
+- `review_summary.md` 更新到 11 项门禁、79/79 声明页逐字校验，并明确抽样
+  只能批准实际查看的记录。
+
+复验：全量 pytest 242 passed；S04 定向 11 passed；改动测试文件 Ruff 通过；
+`git diff --check` 通过。人工评审标志与 holdout 封存状态保持 false，S05 未开始。
+
+## S04 人工审核第一批（2026-09-07）
+
+项目所有者逐组查看首批 10 个永久 dev 语义组的四种问法、证据原文、必要
+限定和禁止断言后，明确批准“按建议处理并通过第一批”。本轮完成：
+
+- 返修 `tps54331.light_load.01` 口语问法，明确询问峰值电感电流与 COMP
+  条件，避免把 160mA 误解成输出负载电流阈值；
+- 返修 `tps54331.thermal_shutdown.01` 四种问法及限定条件，忠实表达为结温
+  超过 165°C 停止开关、降到 165°C 以下重新执行上电流程，不再虚构两个
+  独立且相同的触发/恢复阈值；
+- 新增 `evaluations/cases/human_review.json`，记录审核人、日期、依据、10 个
+  语义组及其实际引用的 15 个 span；对应 40 cases 和 15 spans 置
+  `human_reviewed=true`，其余记录保持 false；
+- validator 改为审核清单驱动，并新增范围与可追溯性门禁：禁止未登记记录
+  置 true、禁止重复批次/重复 ID，且每批 span 必须精确等于该批案例引用集合。
+
+当前状态：**S04 TECHNICAL DATASET COMPLETE / HUMAN REVIEW IN PROGRESS
+(BATCH 01 COMPLETE) / S04 NOT YET FULLY ACCEPTED / S05 NOT STARTED**。
+全部 document 仍未做人审，holdout_sealed=false。
+
+## S04 人工审核第二批（2026-09-07）
+
+项目所有者批准第二批逐组复核及建议返修。本批覆盖 10 个 dev 普通组、
+40 cases、18 spans，完成以下修订：
+
+- 扩展 PG 与 SYNC 的原文片段，使“外接上拉电阻”和 SYNC 高于 1.5V/
+  低于 1V 的限定进入允许证据集合；
+- 将 OCP 问法收窄为现有证据能够完整支持的保护类型与 FB 折返；
+- 将轻载 pulse-skipping/压差要求与低 FB 频率折返明确为两个条件；
+- 补全 BIAS 在 3.2V 上下的内部稳压器供电切换关系；
+- 新增 `mp4570.thermal_resistance.01.s3`，绑定物理页 4 的
+  “Measured on JESD51-7, 4-layer PCB.”，并加入四个热阻案例的必要条件。
+
+审核清单新增 `s04-human-review-batch-02`。当前累计 20 个普通语义组、
+80 cases、33 spans 已审核；其他记录与全部 document 保持 false，
+holdout_sealed=false，S05 未开始。
+
+## S04 人工审核第三批（2026-09-07）
+
+项目所有者批准第三批逐组复核及建议返修。本批覆盖剩余 10 个 dev 普通组、
+40 cases、15 spans：
+
+- OVTP 禁语改为禁止将 109%/107% 动作阈值当作正常输出调节范围，避免对
+  OVTP 的持续动作能力作证据外断言；
+- EN 四种问法明确 1.25V 是增加 3µA 迟滞电流的条件，不再把它直接写成
+  完整使能上升阈值；浮空状态按原文保留为内部上拉提供默认工作状态；
+- TPS562201 Eco 禁语删除当前允许 span 未承载的 FCCM 扩展说明，收窄为
+  不得把只针对 TPS562201 的 pulse-skipping 描述直接套用到 TPS562208。
+
+审核清单新增 `s04-human-review-batch-03`。当前 30 个 dev 普通语义组、
+120 cases、48 spans 已审核完成；10 个边界组和 20 个 holdout 普通组待审，
+全部 document 仍为 false，holdout_sealed=false，S05 未开始。
+
+## S04 人工审核第四批（2026-09-07）
+
+项目所有者批准 7 个 `boundary_dev` 组的建议返修，并明确预授权后续批次按
+相同复核、返修和验证方式执行。本批关键修复：
+
+- 纠正 MP4570 短路主题的错误 NOT_FOUND：P15/P16 明确提供 SS 放电、解除
+  后重新软启动和低 FB 电流限值下降证据；对应案例改为 `ANSWERED`；
+- TPS562201 OVP 保持 `INSUFFICIENT_EVIDENCE`，新增 P5 表头及 VUVP 65%
+  片段，防止把欠压阈值误当 OVP；
+- 结温与环境温度案例加入功耗公式和 JESD51-7 四层 PCB 条件；
+- 型号混淆案例加入 TPS562201 hiccup 与 TPS54331 频率折返证据。
+
+当前累计 37 个组、148 cases、53 spans 已审核；剩余 20 个 holdout 普通组
+和 3 个 boundary_holdout 组待审，document 级审核与封存尚未执行，S05 未开始。
+
+## S04 人工审核第五至第七批及最终封存（2026-09-07）
+
+项目所有者已明确批准第四批后的剩余审核按同一套逐组复核、必要返修、测试
+验证流程直接完成。本轮覆盖 20 个 holdout 普通组和 3 个
+`boundary_holdout` 组，共 92 cases；随后完成 4 份语料文档的来源、版本、
+哈希和页数复核，并执行 holdout 封存。
+
+第五批返修 10 个 holdout 普通组，主要改动包括：
+
+- TR/SS 禁语收窄到原文能够支持的 tracking 上限，不再声称悬空必然无法启动；
+- LT8610 热阻证据补全 MSE 16 引脚 MSOP 与 exposed pad pin 17 必须焊接到
+  PCB 的条件；
+- Burst Mode 的 1.7µA 改为器件消耗电流，不再表述为功率；
+- RT 公式证据补全 RT 使用 kΩ、fSW 使用 MHz 的单位；
+- TPS54331 EMI 口语问法收窄为内部降低电磁干扰的设计措施。
+
+第六批返修剩余 10 个 holdout 普通组，主要改动包括：
+
+- TPS54331 布局证据补全典型 10µF X5R/X7R 输出电容及其放置要求；
+- TPS562201 关断电流问法删除“旧版本更省电”的无证据评价；
+- MP4570 EN 高压用法限定为经上拉电阻驱动、吸收电流小于 150µA，删除由
+  跨页残句推得的直接电压上限。
+
+第七批复核 3 个 `boundary_holdout` 组：
+
+- TPS54331 PG 缺失案例维持 `INSUFFICIENT_EVIDENCE`；
+- MP4570 5A 请求明确以已发布 3A 连续额定值为界，额外散热不能把正式资格
+  改写为 5A；
+- 图片曲线案例维持 `INSUFFICIENT_EVIDENCE`，不得由图像外推未提供条件。
+
+文档级审核逐份核对本地 PDF 页数、SHA-256、官方来源域名和版本：MP4570
+Rev 1.01（22 页）、TPS54331 SLVS839H（41 页）、TPS562201/208 SLVSD91D
+（28 页）、LT8610 Rev D（22 页）。同时修正语料说明中两类过强结论：
+MP4570 短路不再标为 NOT_FOUND；TI 文档未检索到 PG/SYNC 描述时，不再据此
+断言功能不存在。
+
+最终状态与门禁：
+
+| 检查 | 结果 |
+|---|---|
+| 人工审核 | 60 groups / 240 cases / 83 spans / 4 documents 全部 `human_reviewed=true` |
+| 审核清单 | 7 个 case 批次 + 1 个 document review，集合与数据记录精确一致 |
+| holdout | `holdout_sealed=true`，封存日期 2026-09-07 |
+| 全量 pytest | **243 passed in 6.22s** |
+| S04 定向 pytest | **12 passed** |
+| 改动测试文件 Ruff | 通过，0 条 |
+| git diff --check | 通过 |
+
+**S04 FULLY ACCEPTED / HOLDOUT SEALED / S05 NOT STARTED**。封存后不得依据
+holdout 结果继续修改 query 或 gold evidence；后续工作从 S05 开始。

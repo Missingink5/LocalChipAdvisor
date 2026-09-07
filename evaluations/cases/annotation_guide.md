@@ -121,3 +121,5 @@
 - `human_reviewed`：**只能由用户审核后置 true**。不得虚构 reviewer 名字/时间/依据/批准。
 - 用户批准前，最终状态必须写：
   `S04 TECHNICAL DATASET COMPLETE / HUMAN REVIEW PENDING / S04 NOT YET FULLY ACCEPTED / S05 NOT STARTED`
+- 2026-09-07 项目所有者完成前三批逐批批准，并明确预授权后续批次按同一
+  复核、返修、验证方式执行；最终批次与文档依据记录在 `human_review.json`。

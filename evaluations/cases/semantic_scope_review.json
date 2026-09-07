@@ -1,308 +1,308 @@
 {
   "review_kind": "technical_pre_review",
   "reviewed_date": "2026-09-06",
-  "human_reviewed": false,
-  "note": "技术预审（agent）：逐组核对四种语言表达的 query 与 gold evidence/qualifiers 的范围是否一致。disposition=corrected 的组仅修改了 query 字段，其余字段（ID/split/状态/证据/限定/禁语/评审标记）未变。本清单不是人工语义批准；human_reviewed 恒为 false。",
+  "human_reviewed": true,
+  "note": "技术预审清单已在逐组人工审核中使用；2026-09-07 全部 50 个普通语义组经项目所有者批准，具体批次和依据见 human_review.json。",
   "groups": [
     {
       "semantic_group_id": "lt8610.burst.01",
       "disposition": "corrected",
       "scope_summary": "Burst Mode 工作机制（单脉冲+睡眠，睡眠电流 1.7µA）与轻载效率目的",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.en_uv.01",
       "disposition": "corrected",
       "scope_summary": "EN 引脚上升阈值 1.0V/40mV 迟滞及其可编程 VIN UVLO 用途",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.foldback.01",
       "disposition": "corrected",
       "scope_summary": "频率折返行为对 SYNC 引脚状态的依赖（低=降频，高/时钟=无 foldback）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.frequency.01",
-      "disposition": "no_change",
+      "disposition": "corrected",
       "scope_summary": "开关频率由 RT 电阻编程（200kHz–2.2MHz 范围与 RT 公式）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.ilim.01",
       "disposition": "corrected",
       "scope_summary": "开关电流限值 ILIM：低占空比 ≥3.5A 线性降至 DC=0.8 时 2.8A",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.pg.01",
       "disposition": "corrected",
       "scope_summary": "PG 拉低条件（±9% 窗口）与有效性条件（VIN>3.4V、无故障）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.quiescent.01",
       "disposition": "corrected",
       "scope_summary": "静态电流 2.5µA 及其成立条件（无输出负载的典型应用）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.sync.01",
       "disposition": "corrected",
       "scope_summary": "外部时钟同步范围 200kHz–2.2MHz 与 SYNC 电平选择工作模式（<0.4V=Burst Mode）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.thermal_resistance.01",
       "disposition": "corrected",
       "scope_summary": "热阻数值 θJA=40°C/W、θJC(PAD)=10°C/W",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "lt8610.trss.01",
       "disposition": "corrected",
       "scope_summary": "TR/SS 引脚编程输出电压上升速率（2.2µA 上拉）与跟踪关闭条件（>0.97V）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.bias.01",
       "disposition": "corrected",
       "scope_summary": "BIAS 引脚作用（3.2V 切换内部 2.5V 稳压器供电）与推荐连接 3.3V–5.5V",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.bootstrap.01",
       "disposition": "corrected",
       "scope_summary": "高占空比（VOUT/VIN>65%）自举电容充电不足问题与外接二极管方案",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.en_zener.01",
       "disposition": "corrected",
       "scope_summary": "EN 引脚内部 6.5V 稳压二极管钳位与接高电压的限流要求（≤6V 直连/灌电流<150µA）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.input_range.01",
       "disposition": "corrected",
       "scope_summary": "推荐工作输入电压范围 4.5V–55V（完整范围，非单侧边界）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.light_load.01",
       "disposition": "corrected",
       "scope_summary": "轻载行为：脉冲跳跃、VIN–VOUT≥3V 条件与 FB<25% REF 频率折返至 5%",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.ocp.01",
       "disposition": "corrected",
       "scope_summary": "过流保护机制（逐周期峰值限流+谷值检测）与 FB 电压相关的限值减半行为",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.output_range.01",
       "disposition": "corrected",
       "scope_summary": "推荐工作输出电压范围 1V 至 0.9×VIN",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.output_set.01",
       "disposition": "no_change",
       "scope_summary": "输出电压由输出端到 FB 的电阻分压器设定",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.ovp.01",
       "disposition": "corrected",
       "scope_summary": "输出过压保护阈值（FB>115% REF 关断并拉低 PG）与恢复条件（<103% REF）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.power_good.01",
-      "disposition": "no_change",
+      "disposition": "corrected",
       "scope_summary": "PG 开漏指示：90% REF 拉高、85% REF 拉低",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.soft_start.01",
       "disposition": "corrected",
       "scope_summary": "软启动时间的外部设置方式与悬空时的内部 0.5ms 默认值（取更长者）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.sync.01",
       "disposition": "corrected",
-      "scope_summary": "外部时钟同步能力与推荐同步频率范围 100kHz–1MHz",
-      "human_reviewed": false
+      "scope_summary": "外部时钟同步范围 100kHz–1MHz 与 SYNC 输入高低逻辑电平要求",
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.thermal_resistance.01",
       "disposition": "corrected",
       "scope_summary": "热阻参数（θJA=45°C/W、θJC=10°C/W）与最大允许功耗公式 PD(MAX)=(TJ−TA)/θJA",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.thermal_shutdown.01",
       "disposition": "corrected",
       "scope_summary": "过温关断触发约 170°C、恢复约 160°C、~10°C 迟滞（均为典型值）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "mp4570.uvlo.01",
-      "disposition": "no_change",
-      "scope_summary": "VIN UVLO 行为与典型上升阈值 3.9V（min/typ/max）",
-      "human_reviewed": false
+      "disposition": "corrected",
+      "scope_summary": "EN 有效时的 VIN UVLO 上升阈值 3.7/3.9/4.1V（min/typ/max）",
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.boot.01",
       "disposition": "corrected",
       "scope_summary": "自举电容要求（0.1µF 必需）与 100% 占空比条件（BOOT-PH>2.1V）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.emc.01",
       "disposition": "corrected",
       "scope_summary": "内部降低 EMI 的设计措施（栅极驱动抑制振铃、内部电源轨隔离）——定性描述",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.en.01",
       "disposition": "corrected",
       "scope_summary": "EN 引脚行为：1.25V 阈值+3µA 迟滞与浮空时的内部上拉默认使能",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.frequency.01",
-      "disposition": "no_change",
+      "disposition": "corrected",
       "scope_summary": "内部固定 570kHz 开关频率（峰值电流模式）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.iq.01",
       "disposition": "corrected",
       "scope_summary": "工作静态电流 110µA（不开关、无负载）与关断电流 1µA 的区分",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.layout.01",
       "disposition": "corrected",
       "scope_summary": "VIN 旁路电容要求与旁路电容/VIN/续流二极管环路面积最小化",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.light_load.01",
       "disposition": "corrected",
       "scope_summary": "进入 Eco-mode 的条件（峰值电感电流<160mA、COMP 0.5V，典型值）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.ocp.01",
       "disposition": "corrected",
       "scope_summary": "短路保护：逐周期限流与开关频率除以 1/2/4/8 的频率折返",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.ovtp.01",
       "disposition": "corrected",
       "scope_summary": "OVTP 的瞬态保护目的与阈值（109%×VREF 关断、107%×VREF 恢复）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.soft_start.01",
       "disposition": "corrected",
       "scope_summary": "slow-start 必须外部 SS 电容设置（无内部）及 1–10ms、CSS≤27nF 限制",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.thermal_shutdown.01",
       "disposition": "corrected",
       "scope_summary": "过温关断触发与恢复阈值均为 165°C（结温）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.vout_set.01",
       "disposition": "no_change",
       "scope_summary": "输出电压由 R5/R6 电阻分压网络外部设定",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps54331.vref.01",
       "disposition": "corrected",
       "scope_summary": "内部基准电压 0.8V 及其精度（初始 ±2%、全温 ±3.5%）——非输出总精度",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.eco.01",
       "disposition": "corrected",
-      "scope_summary": "进入脉冲跳跃 Eco-mode 的条件（开关电流降至 0A）",
-      "human_reviewed": false
+      "scope_summary": "开关电流降至 0A 时进入脉冲跳跃 Eco-mode，随后通过休眠期节能",
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.eco_fccm.01",
       "disposition": "corrected",
       "scope_summary": "TPS562201（脉冲跳跃/Advanced Eco-mode）与 TPS562208（FCCM）轻载模式区别",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.frequency.01",
       "disposition": "corrected",
       "scope_summary": "开关频率：准固定约 580kHz 与最低约 200kHz",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.input_range.01",
       "disposition": "corrected",
       "scope_summary": "输入电压范围 4.5V–17V（完整范围，非单侧边界）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.layout.01",
       "disposition": "corrected",
       "scope_summary": "输出电容与 GND 引脚之间地线尽量宽的布局要求",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.ocl.01",
-      "disposition": "no_change",
+      "disposition": "corrected",
       "scope_summary": "逐周期谷值检测过流限制（低侧 FET 压降监测）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.shutdown_current.01",
       "disposition": "corrected",
       "scope_summary": "关断电流 <20µA 及修订历史（旧版 <10µA 改为 <20µA）",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.soft_start.01",
       "disposition": "corrected",
       "scope_summary": "内部固定 1.0ms 软启动与预偏置输出下的启动行为",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.tsd.01",
       "disposition": "corrected",
       "scope_summary": "过温关断典型阈值 160°C 与非锁存特性",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.uvlo.01",
-      "disposition": "no_change",
+      "disposition": "corrected",
       "scope_summary": "UVLO 监测内部稳压器电压、非锁存关断",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.uvp.01",
-      "disposition": "no_change",
+      "disposition": "corrected",
       "scope_summary": "UVP 延迟约 256µs 关断、hiccup 约 10ms 重启",
-      "human_reviewed": false
+      "human_reviewed": true
     },
     {
       "semantic_group_id": "tps562201.vfb_accuracy.01",
       "disposition": "corrected",
       "scope_summary": "反馈电压精度 2%（25°C）——非输出总精度",
-      "human_reviewed": false
+      "human_reviewed": true
     }
   ]
 }
