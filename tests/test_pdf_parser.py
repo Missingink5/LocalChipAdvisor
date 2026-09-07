@@ -1,4 +1,4 @@
-﻿"""Contract tests for local PDF parsing with stable page provenance."""
+"""Contract tests for local PDF parsing with stable page provenance."""
 
 from __future__ import annotations
 
@@ -8,7 +8,11 @@ from pathlib import Path
 import pymupdf
 import pytest
 
-from local_chip_advisor.ingestion.pdf_parser import parse_pdf
+from local_chip_advisor.ingestion.pdf_parser import (
+    ParsedPageLayout,
+    parse_pdf,
+    parse_pdf_layout,
+)
 
 
 def create_test_pdf(path: Path) -> None:
@@ -26,6 +30,19 @@ def create_test_pdf(path: Path) -> None:
         "MP4570 TEST PAGE TWO\nContinuous output current: 3A",
     )
 
+    document.save(path)
+    document.close()
+
+
+def create_image_heavy_pdf(path: Path) -> None:
+    """Produce a page whose text is empty but whose image list is non-empty."""
+
+    document = pymupdf.open()
+    page = document.new_page(width=400, height=400)
+    pix = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, 200, 200), 0)
+    pix.clear_with(255)
+    image_bytes = pix.tobytes("png")
+    page.insert_image(pymupdf.Rect(50, 50, 250, 250), stream=image_bytes)
     document.save(path)
     document.close()
 
@@ -75,3 +92,32 @@ def test_parse_pdf_rejects_non_pdf_file(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="valid PDF"):
         parse_pdf(fake_pdf)
+
+
+def test_parse_pdf_layout_matches_parse_pdf_text_and_sha(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "test.pdf"
+    create_test_pdf(pdf_path)
+
+    base = parse_pdf(pdf_path)
+    layout = parse_pdf_layout(pdf_path)
+
+    assert layout.sha256 == base.sha256
+    assert layout.page_count == base.page_count
+    assert tuple(p.page_number for p in layout.pages) == tuple(
+        p.page_number for p in base.pages
+    )
+    for layout_page, base_page in zip(layout.pages, base.pages):
+        assert layout_page.text == base_page.text
+        assert isinstance(layout_page, ParsedPageLayout)
+
+
+def test_parse_pdf_layout_counts_images_on_image_heavy_page(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "image_heavy.pdf"
+    create_image_heavy_pdf(pdf_path)
+
+    layout = parse_pdf_layout(pdf_path)
+
+    page_one = layout.pages[0]
+    assert page_one.image_count >= 1
+    assert page_one.text_block_count == 0
+    assert page_one.char_count == 0
