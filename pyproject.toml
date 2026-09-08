@@ -5,20 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "local-chip-advisor"
 version = "0.1.0"
-description = "Offline, evidence-bound MPS Buck converter selection assistant"
+description = "Evidence-bound chip Hybrid Search MVP"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
 dependencies = [
-  "chromadb>=1.5.4,<2",
-  "fastapi>=0.116,<1",
   "httpx>=0.28,<1",
+  "numpy>=2,<3",
   "pydantic>=2.11,<3",
-  "pydantic-settings>=2.10,<3",
   "pymupdf>=1.26,<2",
-  "pyyaml>=6,<7",
-  "rank-bm25>=0.2.2,<1",
-  "streamlit>=1.48,<2",
-  "uvicorn[standard]>=0.35,<1",
 ]
 
 [project.scripts]

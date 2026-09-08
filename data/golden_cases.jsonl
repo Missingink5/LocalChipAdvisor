@@ -1,0 +1,10 @@
+{"query":"MP4570最大输入电压是多少？","intent":"PART_QA","expect":"55 V","api_calls":0}
+{"query":"MPQ4570是否通过AEC-Q100？","intent":"PART_QA","expect":"支持","api_calls":0}
+{"query":"比较MP4570和MPQ4570","intent":"PART_COMPARE","expect_parts":["MP4570","MPQ4570"],"api_calls":0}
+{"query":"找支持28V输入、24V输出、3A的Buck","intent":"PART_SELECTION","expect_parts":["MP4570","MPQ4570"]}
+{"query":"找支持24V输入、24V输出、3A的Buck","intent":"PART_SELECTION","expect":"none_due_to_0.9vin"}
+{"query":"MP4570短路以后怎么保护？","intent":"PART_QA","expect_document":"MPS-MP4570-REV1.01"}
+{"query":"请说明MPQ4570的过温保护机制","intent":"PART_QA","expect_document":"MPS-MPQ4570-REV1.05"}
+{"query":"How does MP023 recover from over-voltage protection?","intent":"PART_QA","expect_document":"MPS-MP023-REV1.1"}
+{"query":"MP023的package是什么？","intent":"PART_QA","expect":"SOIC8-7A"}
+{"query":"MPQ4570发生short circuit后怎么恢复？","intent":"PART_QA","expect_document":"MPS-MPQ4570-REV1.05"}

@@ -5,6 +5,12 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .env
+.env.*
+!.env.example
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/datasheets/
 
 # Local data and model artifacts
 data/raw/**

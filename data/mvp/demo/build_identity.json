@@ -1,7 +1,0 @@
-{
-  "database_sha256": "98adeda602c2fa1decaa94de667d331e8b2940d8e2eab1fdc23c3201a69ab6e9",
-  "model": "qwen3-embedding:0.6b",
-  "model_digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d",
-  "query_prefix": "Instruct: Retrieve relevant semiconductor datasheet passages for the query.\nQuery: ",
-  "schema_version": 1
-}
