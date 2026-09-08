@@ -70,6 +70,16 @@ def model_digest(client: httpx.Client, model: str) -> str:
     raise RuntimeError(f"Ollama embedding model unavailable: {model}")
 
 
+def is_model_loaded(client: httpx.Client, model: str) -> bool:
+    """True when Ollama currently has `model` in VRAM (size_vram > 0)."""
+    response = client.get("/api/ps")
+    response.raise_for_status()
+    for item in response.json().get("models", []):
+        if item.get("name") == model and (item.get("size_vram") or 0) > 0:
+            return True
+    return False
+
+
 def embed(client: httpx.Client, texts: list[str], model: str) -> list[list[float]]:
     response = client.post("/api/embed", json={"model": model, "input": texts,
                                                "truncate": False, "keep_alive": "30m"})
@@ -216,9 +226,22 @@ class Index:
             raise RuntimeError("Chroma chunk IDs mismatch")
 
     def search(self, query: str, products: list[str], mode: str = "hybrid",
-               top_k: int = 12) -> list[dict]:
-        if mode not in {"hybrid", "dense", "bm25"}:
-            raise ValueError("mode must be hybrid, dense or bm25")
+               top_k: int = 12, chat_model: str | None = None) -> list[dict]:
+        """mode "auto": bm25 when chat_model is already loaded, else hybrid.
+
+        Embedding the query loads qwen3-embedding:0.6b into VRAM. On the
+        8 GiB RTX 4060 Laptop WDDM that evicts the resident chat model
+        and forces a ~6.5s reload on the next chat call. When the chat
+        model is already loaded and the question is in scope, bm25-only
+        avoids the swap entirely.
+        """
+        if mode not in {"hybrid", "dense", "bm25", "auto"}:
+            raise ValueError("mode must be hybrid, dense, bm25 or auto")
+        if mode == "auto":
+            if chat_model and is_model_loaded(self.client, chat_model):
+                mode = "bm25"
+            else:
+                mode = "hybrid"
         allowed = {p.upper() for p in products}
         records = [r for r in self.records if r["chunk_id"] not in self.noisy_ids and
                    (not allowed or allowed.intersection(p.upper() for p in r["products"]))]
@@ -263,6 +286,6 @@ class Index:
             selected.append({**record, "score": fused[chunk_id]})
             seen_text.add(signature)
             budget -= len(record["text"])
-            if len(selected) >= min(top_k, 12):
+            if len(selected) >= top_k:
                 break
         return selected

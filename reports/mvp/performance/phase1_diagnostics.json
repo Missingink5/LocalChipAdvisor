@@ -1,0 +1,39 @@
+{
+  "phase": "phase1-diagnostics",
+  "recorded_at": "2026-09-07T23:50:00+08:00",
+  "benchmark": "scripts/benchmark_ollama.py --num-ctx 8192 --queries 2 (before_p1.json)",
+  "hardware_limits": {
+    "gpu": "RTX 4060 Laptop 8GiB, WDDM",
+    "chat_model": {"size_bytes": 5628493822, "100pct_vram": true},
+    "embedding_model_loaded_size_bytes": 2370652077,
+    "output_tok_per_s": 30,
+    "prompt_tok_per_s": 130,
+    "note": "output ~30-40 tok/s is the memory-bandwidth ceiling of this GPU; latency scales with output tokens"
+  },
+  "residency": {
+    "chat_model_load_s": 6.5,
+    "embedding_model_load_s": 2.5,
+    "eviction_confirmed": "MAX_LOADED_MODELS=1: embedding load evicts chat (ps empty of chat after embed); chat load evicts embedding. Every question pays one chat reload when hybrid retrieval sits between chat calls."
+  },
+  "single_question_attribution": {
+    "query": "MP4570 太热会自己停吗？",
+    "status": "ANSWERED",
+    "total_wall_s": 130.6,
+    "stages": [
+      {"stage": "intent_llm", "prompt_tokens": 622, "output_tokens": 201, "wall_s": 6.0, "load_s": 0.0, "waste": "explicit product+topic present; deterministic path could resolve"},
+      {"stage": "generation", "prompt_tokens": 3377, "output_tokens": 1412, "wall_s": 44.3, "load_s": 6.8, "note": "mid-question embedding evicted chat model"},
+      {"stage": "audit", "prompt_tokens": 4382, "output_tokens": 717, "wall_s": 20.8, "load_s": 0.0, "note": "full bundle resent"},
+      {"stage": "revision", "prompt_tokens": 4205, "output_tokens": 1363, "wall_s": 35.9, "load_s": 0.0, "note": "re-emits nearly a full draft"},
+      {"stage": "revision_audit", "prompt_tokens": 4302, "output_tokens": 712, "wall_s": 20.5, "load_s": 0.0}
+    ],
+    "total_output_tokens": 4405,
+    "output_generation_seconds_estimate": 113,
+    "root_cause_ranking": [
+      "1. output-token budget x multiple LLM calls at ~39 tok/s (~113s of 130.6s)",
+      "2. revision + revision_audit chain triggered after a failed audit (2075 output tokens, ~56s)",
+      "3. intent LLM call for an explicit question (201 output tokens, ~6s)",
+      "4. one chat-model reload per question from embedding/chat thrash (~6.8s)",
+      "5. prompt prefill is fast (1700-2000 tok/s); evidence payload size costs ~2-3s per stage, minor"
+    ]
+  }
+}

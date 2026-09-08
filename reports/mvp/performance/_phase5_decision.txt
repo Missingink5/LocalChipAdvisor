@@ -1,0 +1,24 @@
+Phase 5 — num_ctx + num_predict tightening (4-case probe, demo-v2)
+
+Observed per-stage token usage from Phase 4 (num_predict=2200 gen/rev, 900 audit):
+
+  stage              prompt_tokens (max)   output_tokens (max)
+  generation         3969                 1404
+  audit              4385                  675
+  revision           4209                 2105  (1 case at cap)
+  revision_audit     4332                  675
+
+Trial 1: num_ctx 8192 → 6144, audit num_predict 900 → 800
+  strict mean   95.4s → 99.4s    +4% (worse)
+  prefill delta < 0.3s per call  (eval is the bottleneck, not prefill)
+  audit eval budget 800/900 hits at most 675 tokens observed → no headroom pressure
+
+Conclusion: num_ctx=8192 and audit num_predict=900 are kept as the runtime
+defaults. The cost of reducing them is zero-or-negative on this model and
+hardware (RTX 4060 Laptop 8 GiB WDDM, qwen3.5:9b-q4_K_M at ~30-40 tok/s).
+The decisive lever is prompt token count, not max_output. Phase 6 shrinks
+the prompts by reducing the evidence fan-out (6 → 4 chunks, budget
+11000 → 6000-8000 chars).
+
+audit_num_predict and num_ctx remain CLI-tunable on evaluate_mvp.py so
+future model swaps can re-measure without code changes.

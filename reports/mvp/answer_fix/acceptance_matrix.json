@@ -27,6 +27,236 @@
           "clarification": null
         }
       ]
+    },
+    {
+      "case_id": "mp4570_thermal_en",
+      "language": "en",
+      "query": "At what temperature does the MP4570 thermal shutdown trigger and recover?",
+      "follow_up": null,
+      "score": {
+        "passed": false,
+        "notes": [
+          "only 0 claims, expected >= 1",
+          "missing mention of '170'",
+          "missing mention of '160'"
+        ]
+      },
+      "turns": [
+        {
+          "input": "At what temperature does the MP4570 thermal shutdown trigger and recover?",
+          "status": "RETRIEVAL_ERROR",
+          "answer_text": "",
+          "message": "检索失败：RuntimeError: 检索失败：ReadTimeout: timed out",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [],
+          "elapsed_seconds": 185.818,
+          "clarification": null
+        }
+      ]
+    },
+    {
+      "case_id": "mp4570_thermal_mixed",
+      "language": "mixed",
+      "query": "MP4570 的 thermal shutdown 是多少度触发、多少度恢复？",
+      "follow_up": null,
+      "score": {
+        "passed": false,
+        "notes": [
+          "only 0 claims, expected >= 1",
+          "missing mention of '170'",
+          "missing mention of '160'"
+        ]
+      },
+      "turns": [
+        {
+          "input": "MP4570 的 thermal shutdown 是多少度触发、多少度恢复？",
+          "status": "RETRIEVAL_ERROR",
+          "answer_text": "",
+          "message": "检索失败：RuntimeError: 检索失败：ReadTimeout: timed out",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [],
+          "elapsed_seconds": 186.023,
+          "clarification": null
+        }
+      ]
+    },
+    {
+      "case_id": "clarify_missing_product",
+      "language": "zh",
+      "query": "太热会自己停吗？",
+      "follow_up": "MP4570",
+      "score": {
+        "passed": false,
+        "notes": [
+          "status RETRIEVAL_ERROR not in ['NEEDS_CLARIFICATION']"
+        ]
+      },
+      "turns": [
+        {
+          "input": "太热会自己停吗？",
+          "status": "NEEDS_CLARIFICATION",
+          "answer_text": "",
+          "message": "请告诉我具体芯片型号，例如 MP4570、TPS54331、TPS562201、TPS562208 或 LT8610。",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [
+            "请告诉我具体芯片型号，例如 MP4570、TPS54331、TPS562201、TPS562208 或 LT8610。"
+          ],
+          "elapsed_seconds": 4.273,
+          "clarification": {
+            "request_id": "cl_5f9b9c0e217c",
+            "intent_revision": 0,
+            "reason": "missing_product",
+            "question": "请告诉我具体芯片型号，例如 MP4570、TPS54331、TPS562201、TPS562208 或 LT8610。",
+            "options": [
+              {
+                "option_id": "opt_mp4570",
+                "label": "MP4570",
+                "proposed_value": "MP4570"
+              },
+              {
+                "option_id": "opt_tps54331",
+                "label": "TPS54331",
+                "proposed_value": "TPS54331"
+              },
+              {
+                "option_id": "opt_tps562201",
+                "label": "TPS562201",
+                "proposed_value": "TPS562201"
+              }
+            ],
+            "target_field": "product_ids"
+          }
+        },
+        {
+          "input": "MP4570",
+          "status": "RETRIEVAL_ERROR",
+          "answer_text": "",
+          "message": "检索失败：RuntimeError: 检索失败：ReadTimeout: timed out",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [],
+          "elapsed_seconds": 185.404,
+          "clarification": null
+        }
+      ]
+    },
+    {
+      "case_id": "tps562201_ovp_unsupported",
+      "language": "zh",
+      "query": "TPS562201 的 OVP 阈值具体是多少伏动作？",
+      "follow_up": null,
+      "score": {
+        "passed": false,
+        "notes": [
+          "status RETRIEVAL_ERROR not in ['INSUFFICIENT_EVIDENCE', 'PARTIAL_ANSWER']",
+          "only 0 claims, expected >= 1"
+        ]
+      },
+      "turns": [
+        {
+          "input": "TPS562201 的 OVP 阈值具体是多少伏动作？",
+          "status": "RETRIEVAL_ERROR",
+          "answer_text": "",
+          "message": "检索失败：RuntimeError: 检索失败：ReadTimeout: timed out",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [],
+          "elapsed_seconds": 185.862,
+          "clarification": null
+        }
+      ]
+    },
+    {
+      "case_id": "no_engineering_guarantee",
+      "language": "zh",
+      "query": "MP4570 在 24V 输入、5V 输出、3A 持续、85°C 环境下，绝对不会损坏吗？",
+      "follow_up": null,
+      "score": {
+        "passed": false,
+        "notes": [
+          "status RETRIEVAL_ERROR not in ['INSUFFICIENT_EVIDENCE', 'PARTIAL_ANSWER']",
+          "only 0 claims, expected >= 1"
+        ]
+      },
+      "turns": [
+        {
+          "input": "MP4570 在 24V 输入、5V 输出、3A 持续、85°C 环境下，绝对不会损坏吗？",
+          "status": "RETRIEVAL_ERROR",
+          "answer_text": "",
+          "message": "检索失败：RuntimeError: 检索失败：ReadTimeout: timed out",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [],
+          "elapsed_seconds": 188.999,
+          "clarification": null
+        }
+      ]
+    },
+    {
+      "case_id": "mp4570_absolute_max_vin",
+      "language": "zh",
+      "query": "MP4570 的 60V 是不是能长期工作电压？",
+      "follow_up": null,
+      "score": {
+        "passed": false,
+        "notes": [
+          "only 0 claims, expected >= 1"
+        ]
+      },
+      "turns": [
+        {
+          "input": "MP4570 的 60V 是不是能长期工作电压？",
+          "status": "RETRIEVAL_ERROR",
+          "answer_text": "",
+          "message": "检索失败：RuntimeError: 检索失败：ReadTimeout: timed out",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [],
+          "elapsed_seconds": 185.909,
+          "clarification": null
+        }
+      ]
+    },
+    {
+      "case_id": "mp4570_soft_start_zh",
+      "language": "zh",
+      "query": "MP4570 软启动时间怎么设置？",
+      "follow_up": null,
+      "score": {
+        "passed": false,
+        "notes": [
+          "only 0 claims, expected >= 1"
+        ]
+      },
+      "turns": [
+        {
+          "input": "MP4570 软启动时间怎么设置？",
+          "status": "RETRIEVAL_ERROR",
+          "answer_text": "",
+          "message": "检索失败：RuntimeError: 检索失败：ReadTimeout: timed out",
+          "citations": [],
+          "claim_count": 0,
+          "claims": [],
+          "unanswered_scopes": [],
+          "elapsed_seconds": 185.986,
+          "clarification": null
+        }
+      ]
     }
-  ]
+  ],
+  "summary": {
+    "total": 8,
+    "passed": 0,
+    "failed": 8
+  }
 }

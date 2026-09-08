@@ -1,0 +1,541 @@
+{
+  "split": "dev",
+  "manifest": "D:\\LocalChipAdvisor\\data\\mvp\\demo-v2\\manifest.json",
+  "metric": "All AND requirements, at least one complete OR span each; hash and page bound",
+  "answer_caveat": "Status agreement is not a semantic factuality audit.",
+  "mode": "answers",
+  "counts": {
+    "cases": 4
+  },
+  "by_language": {},
+  "per_case": [
+    {
+      "case_id": "mp4570.thermal_shutdown.01.zh_formal",
+      "language": "zh_formal",
+      "expected_status": "ANSWERED",
+      "answer": {
+        "status": "ANSWERED",
+        "timings": {
+          "total_seconds": 81.365
+        },
+        "status_matches": true,
+        "selected_coverage": {
+          "required_count": 1,
+          "matched_requirements": [
+            "protection_behavior"
+          ],
+          "full_evidence": true
+        },
+        "citation_violations": [],
+        "answer_text": "MP4570 的过温关断保护通常在结温超过 170°C 时触发。\n\n当结温降至低于 160°C 时，MP4570 会重新开启。\n\n该芯片的过温关断迟滞约为 10°C。\n\nMP4570 的过温关断阈值在规格书中被表征为 170°C，迟滞为 10°C。",
+        "message": "找到支持回答的证据。",
+        "diagnostics": {
+          "timings": {
+            "generation_seconds": 44.29,
+            "hard_validation_seconds": 0.002,
+            "audit_seconds": 34.422,
+            "finalize_seconds": 0.0
+          },
+          "attempts": [
+            {
+              "stage": "generation",
+              "status": "ok",
+              "claims": 4
+            },
+            {
+              "stage": "hard_validation",
+              "status": "ok",
+              "count": 0
+            },
+            {
+              "stage": "audit",
+              "status": "ok"
+            },
+            {
+              "stage": "finalize",
+              "status": "ANSWERED"
+            }
+          ],
+          "issues": [],
+          "profile": "strict",
+          "chat_metrics": {
+            "generation": {
+              "stage": "generation",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 44.2886,
+              "ollama_total_seconds": 44.2788,
+              "load_seconds": 6.8801,
+              "prompt_tokens": 3659,
+              "prompt_eval_seconds": 2.1208,
+              "prompt_tokens_per_second": 1725.3,
+              "output_tokens": 1404,
+              "eval_seconds": 35.2407,
+              "output_tokens_per_second": 39.8,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 2200,
+              "temperature": 0.0
+            },
+            "audit": {
+              "stage": "audit",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 34.4218,
+              "ollama_total_seconds": 34.4125,
+              "load_seconds": 16.0972,
+              "prompt_tokens": 4385,
+              "prompt_eval_seconds": 2.5506,
+              "prompt_tokens_per_second": 1719.2,
+              "output_tokens": 616,
+              "eval_seconds": 15.7262,
+              "output_tokens_per_second": 39.2,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 800,
+              "temperature": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "mp4570.soft_start.01.en",
+      "language": "en",
+      "expected_status": "ANSWERED",
+      "answer": {
+        "status": "ANSWERED",
+        "timings": {
+          "total_seconds": 83.76
+        },
+        "status_matches": true,
+        "selected_coverage": {
+          "required_count": 2,
+          "matched_requirements": [
+            "time_rule"
+          ],
+          "full_evidence": false
+        },
+        "citation_violations": [],
+        "answer_text": "MP4570 通过连接外部电容在 SS 引脚和 GND 之间来设置软启动时间。\n\n当 SS 引脚悬空时，芯片激活内部固定的 0.5ms 软启动时间。\n\n最终的软启动时间由外部电容设定的时间和内部固定的 0.5ms 时间中较长的那个决定。",
+        "message": "找到支持回答的证据。",
+        "diagnostics": {
+          "timings": {
+            "generation_seconds": 26.028,
+            "hard_validation_seconds": 0.0,
+            "audit_seconds": 15.425,
+            "revision_seconds": 23.943,
+            "revision_audit_seconds": 15.448,
+            "finalize_seconds": 0.0
+          },
+          "attempts": [
+            {
+              "stage": "generation",
+              "status": "ok",
+              "claims": 3
+            },
+            {
+              "stage": "hard_validation",
+              "status": "issues",
+              "count": 2
+            },
+            {
+              "stage": "audit",
+              "status": "ok"
+            },
+            {
+              "stage": "revision",
+              "status": "ok",
+              "claims": 3
+            },
+            {
+              "stage": "revision_audit",
+              "status": "ok"
+            },
+            {
+              "stage": "finalize",
+              "status": "ANSWERED"
+            }
+          ],
+          "issues": [
+            {
+              "code": "binding_quote_not_in_evidence",
+              "scope": "claim_float_ss_time",
+              "detail": "数值引用片段不在 chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0014-0014:seq0116:structure-chunker-v1:766ab60bc3329f3f 全文中"
+            },
+            {
+              "code": "binding_value_not_in_quote",
+              "scope": "claim_final_ss_logic",
+              "detail": "binding value 0.5 未出现在 source_quote 中"
+            },
+            {
+              "code": "wrong_value_kind",
+              "scope": "claim_final_ss_logic",
+              "detail": "原文为 min，value_kind=nominal"
+            }
+          ],
+          "profile": "strict",
+          "chat_metrics": {
+            "generation": {
+              "stage": "generation",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 26.0274,
+              "ollama_total_seconds": 25.9983,
+              "load_seconds": 6.2646,
+              "prompt_tokens": 3969,
+              "prompt_eval_seconds": 2.3355,
+              "prompt_tokens_per_second": 1699.4,
+              "output_tokens": 678,
+              "eval_seconds": 17.3613,
+              "output_tokens_per_second": 39.1,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 2200,
+              "temperature": 0.0
+            },
+            "audit": {
+              "stage": "audit",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 15.4249,
+              "ollama_total_seconds": 15.4174,
+              "load_seconds": 0.0023,
+              "prompt_tokens": 4076,
+              "prompt_eval_seconds": 2.2738,
+              "prompt_tokens_per_second": 1792.6,
+              "output_tokens": 505,
+              "eval_seconds": 12.99,
+              "output_tokens_per_second": 38.9,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 800,
+              "temperature": 0.0
+            },
+            "revision": {
+              "stage": "revision",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 23.9422,
+              "ollama_total_seconds": 23.9324,
+              "load_seconds": 0.0215,
+              "prompt_tokens": 3947,
+              "prompt_eval_seconds": 2.1998,
+              "prompt_tokens_per_second": 1794.3,
+              "output_tokens": 872,
+              "eval_seconds": 21.5684,
+              "output_tokens_per_second": 40.4,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 2200,
+              "temperature": 0.0
+            },
+            "revision_audit": {
+              "stage": "revision_audit",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 15.4478,
+              "ollama_total_seconds": 15.4384,
+              "load_seconds": 0.002,
+              "prompt_tokens": 4215,
+              "prompt_eval_seconds": 2.36,
+              "prompt_tokens_per_second": 1786.0,
+              "output_tokens": 502,
+              "eval_seconds": 12.8991,
+              "output_tokens_per_second": 38.9,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 800,
+              "temperature": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "lt8610.quiescent.01.zh_formal",
+      "language": "zh_formal",
+      "expected_status": "ANSWERED",
+      "answer": {
+        "status": "ANSWERED",
+        "timings": {
+          "total_seconds": 119.818
+        },
+        "status_matches": true,
+        "selected_coverage": {
+          "required_count": 2,
+          "matched_requirements": [
+            "no_load_condition"
+          ],
+          "full_evidence": false
+        },
+        "citation_violations": [],
+        "answer_text": "LT8610 在 Burst Mode 睡眠期间的静态电流为 1.7μA。\n\n在典型应用中无负载时，LT8610 从输入电源消耗的静态电流约为 2.5μA。\n\n当 EN/UV 引脚接地时，LT8610 的静态电流降至约 1μA。\n\nLT8610 在关断状态下（EN/UV 引脚低电平）从输入电源消耗的电流为 1μA。",
+        "message": "找到支持回答的证据。",
+        "diagnostics": {
+          "timings": {
+            "generation_seconds": 41.605,
+            "hard_validation_seconds": 0.001,
+            "audit_seconds": 18.889,
+            "revision_seconds": 36.441,
+            "revision_audit_seconds": 19.881,
+            "finalize_seconds": 0.0
+          },
+          "attempts": [
+            {
+              "stage": "generation",
+              "status": "ok",
+              "claims": 4
+            },
+            {
+              "stage": "hard_validation",
+              "status": "issues",
+              "count": 4
+            },
+            {
+              "stage": "audit",
+              "status": "ok"
+            },
+            {
+              "stage": "revision",
+              "status": "ok",
+              "claims": 4
+            },
+            {
+              "stage": "revision_audit",
+              "status": "ok"
+            },
+            {
+              "stage": "finalize",
+              "status": "ANSWERED"
+            }
+          ],
+          "issues": [],
+          "profile": "strict",
+          "chat_metrics": {
+            "generation": {
+              "stage": "generation",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 41.605,
+              "ollama_total_seconds": 41.6027,
+              "load_seconds": 6.8648,
+              "prompt_tokens": 3668,
+              "prompt_eval_seconds": 2.1518,
+              "prompt_tokens_per_second": 1704.6,
+              "output_tokens": 1291,
+              "eval_seconds": 32.5516,
+              "output_tokens_per_second": 39.7,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 2200,
+              "temperature": 0.0
+            },
+            "audit": {
+              "stage": "audit",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 18.8885,
+              "ollama_total_seconds": 18.8604,
+              "load_seconds": 0.0021,
+              "prompt_tokens": 4328,
+              "prompt_eval_seconds": 2.4259,
+              "prompt_tokens_per_second": 1784.1,
+              "output_tokens": 636,
+              "eval_seconds": 16.2647,
+              "output_tokens_per_second": 39.1,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 800,
+              "temperature": 0.0
+            },
+            "revision": {
+              "stage": "revision",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 36.4404,
+              "ollama_total_seconds": 36.4224,
+              "load_seconds": 0.0033,
+              "prompt_tokens": 4209,
+              "prompt_eval_seconds": 2.3597,
+              "prompt_tokens_per_second": 1783.7,
+              "output_tokens": 1367,
+              "eval_seconds": 33.8945,
+              "output_tokens_per_second": 40.3,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 2200,
+              "temperature": 0.0
+            },
+            "revision_audit": {
+              "stage": "revision_audit",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 19.881,
+              "ollama_total_seconds": 19.8568,
+              "load_seconds": 0.0016,
+              "prompt_tokens": 4332,
+              "prompt_eval_seconds": 2.4319,
+              "prompt_tokens_per_second": 1781.3,
+              "output_tokens": 675,
+              "eval_seconds": 17.2561,
+              "output_tokens_per_second": 39.1,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 800,
+              "temperature": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "tps54331.frequency.01.zh_en_mixed",
+      "language": "zh_en_mixed",
+      "expected_status": "ANSWERED",
+      "answer": {
+        "status": "ANSWERED",
+        "timings": {
+          "total_seconds": 112.715
+        },
+        "status_matches": true,
+        "selected_coverage": {
+          "required_count": 1,
+          "matched_requirements": [
+            "fixed_frequency"
+          ],
+          "full_evidence": true
+        },
+        "citation_violations": [],
+        "answer_text": "TPS54331 采用固定频率的峰值电流模式控制。\n\nTPS54331 的内部开关频率固定为 570 kHz。[1, 2]",
+        "message": "找到支持回答的证据。",
+        "diagnostics": {
+          "timings": {
+            "generation_seconds": 27.68,
+            "hard_validation_seconds": 0.0,
+            "audit_seconds": 13.245,
+            "revision_seconds": 55.665,
+            "revision_audit_seconds": 13.428,
+            "finalize_seconds": 0.0
+          },
+          "attempts": [
+            {
+              "stage": "generation",
+              "status": "ok",
+              "claims": 2
+            },
+            {
+              "stage": "hard_validation",
+              "status": "issues",
+              "count": 1
+            },
+            {
+              "stage": "audit",
+              "status": "ok"
+            },
+            {
+              "stage": "revision",
+              "status": "ok",
+              "claims": 2
+            },
+            {
+              "stage": "revision_audit",
+              "status": "ok"
+            },
+            {
+              "stage": "finalize",
+              "status": "ANSWERED"
+            }
+          ],
+          "issues": [
+            {
+              "code": "binding_value_not_in_quote",
+              "scope": "claim_2",
+              "detail": "binding value {\"value\": 570, \"unit\": \"kHz\", \"evidence_ 未出现在 source_quote 中"
+            },
+            {
+              "code": "numeric_binding_missing",
+              "scope": "claim_2",
+              "detail": "claim 含数字但未声明 binding: 570kHz"
+            }
+          ],
+          "profile": "strict",
+          "chat_metrics": {
+            "generation": {
+              "stage": "generation",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 27.6796,
+              "ollama_total_seconds": 27.6729,
+              "load_seconds": 6.8671,
+              "prompt_tokens": 3130,
+              "prompt_eval_seconds": 1.8858,
+              "prompt_tokens_per_second": 1659.8,
+              "output_tokens": 735,
+              "eval_seconds": 18.8895,
+              "output_tokens_per_second": 38.9,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 2200,
+              "temperature": 0.0
+            },
+            "audit": {
+              "stage": "audit",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 13.2447,
+              "ollama_total_seconds": 13.2219,
+              "load_seconds": 0.0037,
+              "prompt_tokens": 3305,
+              "prompt_eval_seconds": 1.854,
+              "prompt_tokens_per_second": 1782.6,
+              "output_tokens": 437,
+              "eval_seconds": 11.2275,
+              "output_tokens_per_second": 38.9,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 800,
+              "temperature": 0.0
+            },
+            "revision": {
+              "stage": "revision",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 55.664,
+              "ollama_total_seconds": 55.657,
+              "load_seconds": 0.0016,
+              "prompt_tokens": 3075,
+              "prompt_eval_seconds": 1.7426,
+              "prompt_tokens_per_second": 1764.6,
+              "output_tokens": 2105,
+              "eval_seconds": 53.7875,
+              "output_tokens_per_second": 39.1,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 2200,
+              "temperature": 0.0
+            },
+            "revision_audit": {
+              "stage": "revision_audit",
+              "model": "qwen3.5:9b-q4_K_M",
+              "wall_seconds": 13.4281,
+              "ollama_total_seconds": 13.4046,
+              "load_seconds": 0.008,
+              "prompt_tokens": 3443,
+              "prompt_eval_seconds": 1.9213,
+              "prompt_tokens_per_second": 1792.0,
+              "output_tokens": 438,
+              "eval_seconds": 11.2674,
+              "output_tokens_per_second": 38.9,
+              "done_reason": "stop",
+              "num_ctx": 6144,
+              "num_predict": 800,
+              "temperature": 0.0
+            }
+          }
+        }
+      }
+    }
+  ],
+  "answer_summary": {
+    "status_counts": {
+      "ANSWERED": 4
+    },
+    "model_error": 0,
+    "insufficient_evidence": 0,
+    "citation_violations": 0,
+    "seconds": {
+      "count": 4,
+      "total": 397.7,
+      "mean": 99.4,
+      "median": 112.7
+    }
+  }
+}

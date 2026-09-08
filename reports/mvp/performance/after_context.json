@@ -1,0 +1,25 @@
+{
+  "recorded_at": "2026-09-08T08:00:00+08:00",
+  "phase": "after-context-budget",
+  "description": "Snapshot after num_ctx / num_predict decisions from Phase 5. num_ctx=8192 (production default), num_predict generation=2200, num_predict audit=900. Audit 800/num_ctx 6144 measured but reverted (no benefit, see phase5_strict_6144_audit800.json).",
+  "artifacts": {
+    "phase5_reverted_try": "reports/mvp/performance/phase5_strict_6144_audit800.json",
+    "phase6_sweet_spot": "reports/mvp/performance/phase6_strict_4ev.json"
+  },
+  "cases": 4,
+  "profile": "strict",
+  "num_ctx": 8192,
+  "num_predict_generation": 2200,
+  "num_predict_audit": 900,
+  "max_records": 4,
+  "max_output_tokens_observed": 2105,
+  "max_prompt_tokens_observed": 4382,
+  "status_counts": {"ANSWERED": 4},
+  "model_error": 0,
+  "insufficient_evidence": 0,
+  "citation_violations": 0,
+  "seconds": {
+    "count": 4, "total": 330.8, "mean": 82.7, "median": 100.2
+  },
+  "note": "num_ctx=8192 is the production default; smaller budgets did not help and risked truncation."
+}

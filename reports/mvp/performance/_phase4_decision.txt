@@ -1,0 +1,26 @@
+Phase 4 — pipeline profile decision (4-case probe, demo-v2 manifest)
+
+  strict   95.4s mean   4/4 ANSWERED   0 MODEL_ERROR   default (DEFAULT_PIPELINE_PROFILE="strict")
+  audit    46.0s mean   3/4 ANSWERED   1 INSUFFICIENT_EVIDENCE  (lt8610.quiescent: hard issues rescued by strict revision, lost by audit drop)
+  fast     37.8s mean   3/4 ANSWERED   1 INSUFFICIENT_EVIDENCE  (same lt8610.quiescent case)
+
+Decision: keep strict as the MVP default. The 1/4 INSUFFICIENT case in
+audit/fast is a real correctness regression (lt8610 quiescent current
+question is recoverable by the model with a revision pass). Switching
+to a faster profile trades acceptance correctness for ~2x speed; that
+trade is rejected by the performance-fix contract ("MUST NOT gain
+speed by removing evidence constraints, faking answers, or skipping
+deterministic validation"). 2.2x from strict + the headroom in Phase 5
+(num_predict tightening, prompts already 3377-4382 tokens against
+num_ctx=8192) and Phase 6 (evidence 6→4 should remove ~30% of
+prompt_tokens) gets us to the 3x target without changing quality.
+
+Side finding fixed during Phase 4:
+- revision occasionally emitted duplicate claim_id="claim_1" — qwen3.5
+  regenerates the same id under JSON schema constraint uniqueItems was
+  not enforced on object arrays (grammar silently no-op). Fixed three
+  layers: grammar uniqueItems on outer array (defense in depth),
+  REVISION_SYSTEM prompt explicitly forbids duplicates, parse_draft
+  deterministically drops later duplicates with a logged warning
+  (single failure mode converted from fail-closed MODEL_ERROR to a
+  recoverable draft).

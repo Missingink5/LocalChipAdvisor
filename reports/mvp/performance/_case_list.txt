@@ -1,0 +1,150 @@
+== dev.jsonl: 120 cases
+mp4570.thermal_shutdown.01.zh_formal | zh_formal | ANSWERED | MP4570 的过温关断保护在多少度触发、多少度恢复？
+mp4570.thermal_shutdown.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 太烫了会自己停下来吗？凉到多少度会自己再开？
+mp4570.thermal_shutdown.01.en | en | ANSWERED | At what temperatures does the MP4570 thermal shutdown trigge
+mp4570.thermal_shutdown.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 thermal shutdown 是多少度触发、多少度恢复？
+mp4570.soft_start.01.zh_formal | zh_formal | ANSWERED | MP4570 的软启动时间如何外部设置，SS 悬空时采用什么时间，最终时间如何确定？
+mp4570.soft_start.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 上电时输出爬升速度怎么调，不接SS电容时多长，最终按哪个时间算？
+mp4570.soft_start.01.en | en | ANSWERED | How is MP4570 soft-start set externally, what time applies w
+mp4570.soft_start.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 soft start 如何外调，SS floating 时是多少，final SS time 怎么确定
+mp4570.input_range.01.zh_formal | zh_formal | ANSWERED | MP4570 的推荐输入电压范围是多少？
+mp4570.input_range.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 输入电压最低和最高各能接多少伏？
+mp4570.input_range.01.en | en | ANSWERED | What is the recommended input voltage range of the MP4570?
+mp4570.input_range.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 VIN 范围是多少？
+mp4570.ovp.01.zh_formal | zh_formal | ANSWERED | MP4570 的输出过压保护阈值是多少？触发后如何恢复？
+mp4570.ovp.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 输出电压冲太高了芯片会怎么保护？什么时候自己恢复？
+mp4570.ovp.01.en | en | ANSWERED | What is the MP4570 output overvoltage protection threshold, 
+mp4570.ovp.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 OVP 保护阈值是多少？触发后怎么恢复？
+mp4570.uvlo.01.zh_formal | zh_formal | ANSWERED | MP4570 在 EN 有效时的 VIN UVLO 上升阈值最小值、典型值和最大值分别是多少？
+mp4570.uvlo.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 的 EN 已经打开时，输入电压升到多少才启动，这个阈值有多大误差范围？
+mp4570.uvlo.01.en | en | ANSWERED | With EN active, what are the minimum, typical, and maximum M
+mp4570.uvlo.01.zh_en_mixed | zh_en_mixed | ANSWERED | EN active 时，MP4570 的 VIN UVLO rising threshold min/typ/max 是
+tps54331.soft_start.01.zh_formal | zh_formal | ANSWERED | TPS54331 是否有内部慢启动，外部SS电容设置的时间范围和容量上限是什么？
+tps54331.soft_start.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 有没有内部软启动，外接SS电容能设多长时间，电容最大多大？
+tps54331.soft_start.01.en | en | ANSWERED | Does the TPS54331 have internal slow start, and what time ra
+tps54331.soft_start.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 是否有 internal slow-start，external SS 的 time range 和 
+tps54331.light_load.01.zh_formal | zh_formal | ANSWERED | TPS54331 在什么条件下进入 Eco-mode？
+tps54331.light_load.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 的峰值电感电流低到什么程度、COMP 电压处于什么水平时，会进入 Eco-mode？
+tps54331.light_load.01.en | en | ANSWERED | Under what conditions does the TPS54331 enter Eco-mode?
+tps54331.light_load.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 轻载时进入 Eco-mode 的条件是什么？
+tps562201.soft_start.01.zh_formal | zh_formal | ANSWERED | TPS562201 的软启动时间是固定的吗？预偏置输出下如何启动？
+tps562201.soft_start.01.zh_colloquial | zh_colloquial | ANSWERED | TPS562201 上电时输出爬升要多久？输出原本有电压时会怎么启动？
+tps562201.soft_start.01.en | en | ANSWERED | What is the TPS562201 fixed soft-start time, and how does it
+tps562201.soft_start.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS562201 的 soft start 是内部固定 1.0ms 吗？预偏置怎么办？
+lt8610.quiescent.01.zh_formal | zh_formal | ANSWERED | LT8610 的静态电流是多少？在什么条件下成立？
+lt8610.quiescent.01.zh_colloquial | zh_colloquial | ANSWERED | LT8610 空载的时候自己耗多少电？
+lt8610.quiescent.01.en | en | ANSWERED | What is the LT8610 quiescent current, and under what conditi
+lt8610.quiescent.01.zh_en_mixed | zh_en_mixed | ANSWERED | LT8610 的 quiescent current 是 2.5µA 吗？在什么条件下？
+tps54331.thermal_shutdown.01.zh_formal | zh_formal | ANSWERED | TPS54331 在结温超过 165°C 后会怎样，温度降到 165°C 以下后如何恢复？
+tps54331.thermal_shutdown.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 结温超过 165°C 后会怎样，降到 165°C 以下后会不会自己恢复？
+tps54331.thermal_shutdown.01.en | en | ANSWERED | What happens when the TPS54331 junction temperature exceeds 
+tps54331.thermal_shutdown.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 结温超过 165°C 时 thermal shutdown 怎么动作，降到 165°C 以下后怎么恢复
+mp4570.power_good.01.zh_formal | zh_formal | ANSWERED | MP4570 的开漏 PG 输出需要如何连接，FB 达到哪些阈值时拉高或拉低？
+mp4570.power_good.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 的 PG 要不要上拉，FB 到多少时会变高或变低？
+mp4570.power_good.01.en | en | ANSWERED | How should the MP4570 open-drain PG output be connected, and
+mp4570.power_good.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 open-drain PG 如何连接，FB 在什么 thresholds 时拉高或拉低？
+mp4570.ocp.01.zh_formal | zh_formal | ANSWERED | MP4570 具备哪些逐周期峰值限流和谷值检测保护，FB 降低时电流限值如何折返？
+mp4570.ocp.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 电流过大时有哪些峰值、谷值保护，FB 很低时限值会降多少？
+mp4570.ocp.01.en | en | ANSWERED | What cycle-by-cycle peak-current limiting and valley-current
+mp4570.ocp.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 有哪些 cycle-by-cycle peak limit 和 valley detection 保护，F
+mp4570.light_load.01.zh_formal | zh_formal | ANSWERED | MP4570 在轻载或空载时如何进入脉冲跳跃、VIN−VOUT 有何要求；另在 FB 很低时频率如何折返？
+mp4570.light_load.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 轻载时怎么跳脉冲、输入输出压差要多少；另外 FB 很低时频率会怎么降？
+mp4570.light_load.01.en | en | ANSWERED | How does the MP4570 use pulse-skipping at light or no load a
+mp4570.light_load.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 轻载时的 pulse skipping 和 VIN−VOUT requirement 是什么；另外低 FB
+mp4570.bootstrap.01.zh_formal | zh_formal | ANSWERED | MP4570 在高占空比应用下自举电路需要注意什么？
+mp4570.bootstrap.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 输出和输入电压很接近、占空比高的时候会不会有问题？怎么办？
+mp4570.bootstrap.01.en | en | ANSWERED | What should be done with the MP4570 bootstrap circuit at hig
+mp4570.bootstrap.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 VOUT/VIN 超过 65% 时 bootstrap 怎么办？
+mp4570.sync.01.zh_formal | zh_formal | ANSWERED | MP4570 的外部同步频率范围是多少，SYNC 输入高低逻辑电平要求是什么？
+mp4570.sync.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 能跟多大频率的外部时钟同步，SYNC 的高低电平要到多少伏？
+mp4570.sync.01.en | en | ANSWERED | What external synchronization range does the MP4570 support,
+mp4570.sync.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 external SYNC frequency range 和 high/low logic leve
+mp4570.bias.01.zh_formal | zh_formal | ANSWERED | MP4570 的 BIAS 引脚如何在 3.2V 上下切换内部稳压器供电，推荐外接什么电压范围？
+mp4570.bias.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 的 BIAS 脚低于或高于 3.2V 时由哪里给内部稳压器供电，建议接多少伏？
+mp4570.bias.01.en | en | ANSWERED | How does the MP4570 BIAS pin switch the internal regulator s
+mp4570.bias.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 BIAS pin 在 3.2V 上下如何切换 internal regulator 供电，recomm
+mp4570.output_set.01.zh_formal | zh_formal | ANSWERED | MP4570 的输出电压如何设定？
+mp4570.output_set.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 怎么改输出电压？
+mp4570.output_set.01.en | en | ANSWERED | How is the output voltage of the MP4570 set?
+mp4570.output_set.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 VOUT 是靠什么设定的？
+mp4570.thermal_resistance.01.zh_formal | zh_formal | ANSWERED | MP4570 的 θJA、θJC 分别是多少，如何用 θJA 计算最大允许功耗？
+mp4570.thermal_resistance.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 的结到环境和结到壳热阻各是多少，最大允许功耗怎么用热阻算？
+mp4570.thermal_resistance.01.en | en | ANSWERED | What are the MP4570 θJA and θJC values, and how is maximum a
+mp4570.thermal_resistance.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 的 θJA、θJC 和用 θJA 计算 PD(MAX) 的公式是什么？
+tps54331.vref.01.zh_formal | zh_formal | ANSWERED | TPS54331 的内部基准电压是多少？精度如何？
+tps54331.vref.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 内部的基准电压是多少伏？误差大不大？
+tps54331.vref.01.en | en | ANSWERED | What is the TPS54331 internal reference voltage, and what is
+tps54331.vref.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 的 VREF 是多少？精度是多少？
+tps54331.frequency.01.zh_formal | zh_formal | ANSWERED | TPS54331 是否采用峰值电流模式控制，内部固定开关频率是多少？
+tps54331.frequency.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 用什么控制模式，开关频率是不是固定在多少kHz？
+tps54331.frequency.01.en | en | ANSWERED | Does the TPS54331 use peak-current-mode control, and what is
+tps54331.frequency.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 是否采用 peak current mode，fixed fSW 是多少？
+tps54331.ovtp.01.zh_formal | zh_formal | ANSWERED | TPS54331 的 OVTP 用于什么瞬态，触发关断和恢复阈值分别是多少？
+tps54331.ovtp.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 输出过冲时OVTP怎么保护，到多少关断、降到多少恢复？
+tps54331.ovtp.01.en | en | ANSWERED | What transient condition is TPS54331 OVTP intended for, and 
+tps54331.ovtp.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 的 OVTP 针对什么 transient，shutdown 和 recovery threshold
+tps54331.en.01.zh_formal | zh_formal | ANSWERED | TPS54331 的 EN 超过 1.25V 后迟滞电流如何变化，EN 悬空时内部上拉提供什么默认状态？
+tps54331.en.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 的 EN 超过 1.25V 后会增加多少迟滞电流，不接 EN 时内部上拉会提供什么默认状态？
+tps54331.en.01.en | en | ANSWERED | How does the TPS54331 EN hysteresis current change above 1.2
+tps54331.en.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 的 EN 超过 1.25V 后 hysteresis current 如何变化，floating 时 
+tps54331.iq.01.zh_formal | zh_formal | ANSWERED | TPS54331 的工作静态电流和关断电流是多少？
+tps54331.iq.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 正常工作但没负载时耗多少电？关断了又耗多少？
+tps54331.iq.01.en | en | ANSWERED | What is the operating and shutdown current of the TPS54331?
+tps54331.iq.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 的 IQ 和 shutdown current 是多少？
+tps54331.boot.01.zh_formal | zh_formal | ANSWERED | TPS54331 的 BOOT-PH 自举电容需要多大，满足什么电压条件时支持100%占空比？
+tps54331.boot.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 的BOOT电容要接多大，BOOT-PH 电压到多少才能跑100%占空比？
+tps54331.boot.01.en | en | ANSWERED | What BOOT-PH capacitor does the TPS54331 require, and what B
+tps54331.boot.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 的 BOOT-PH capacitor 多大，什么 voltage condition 支持 100%
+tps54331.ocp.01.zh_formal | zh_formal | ANSWERED | TPS54331 短路时如何通过逐周期峰值限流和1/2、1/4、1/8频率折返进行保护？
+tps54331.ocp.01.zh_colloquial | zh_colloquial | ANSWERED | TPS54331 短路时怎么逐周期限流，开关频率又会按什么比例降低？
+tps54331.ocp.01.en | en | ANSWERED | How does the TPS54331 protect against a short circuit using 
+tps54331.ocp.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS54331 短路时的 cycle-by-cycle current limit 和 1/2、1/4、1/8 fre
+tps562201.uvp.01.zh_formal | zh_formal | ANSWERED | TPS562201 的输出欠压持续多久后关断，hiccup等待多久后重启？
+tps562201.uvp.01.zh_colloquial | zh_colloquial | ANSWERED | TPS562201 输出欠压多久会停，停了以后隔多久再试着启动？
+tps562201.uvp.01.en | en | ANSWERED | How long does TPS562201 output undervoltage persist before s
+tps562201.uvp.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS562201 的 UVP shutdown delay 和 hiccup restart interval 分别是
+tps562201.tsd.01.zh_formal | zh_formal | ANSWERED | TPS562201 的过温关断典型触发温度是多少，降温后是否会自动恢复？
+tps562201.tsd.01.zh_colloquial | zh_colloquial | ANSWERED | TPS562201 太热到多少度会停，凉下来会不会自己恢复？
+tps562201.tsd.01.en | en | ANSWERED | What is the typical TPS562201 thermal-shutdown temperature, 
+tps562201.tsd.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS562201 的 TSD typical threshold 是多少，cool down 后会自动恢复吗？
+tps562201.frequency.01.zh_formal | zh_formal | ANSWERED | TPS562201 的开关频率是多少？最低能到多少？
+tps562201.frequency.01.zh_colloquial | zh_colloquial | ANSWERED | TPS562201 频率是多少？最低能到多少？
+tps562201.frequency.01.en | en | ANSWERED | What is the TPS562201 switching frequency, and what is its m
+tps562201.frequency.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS562201 是固定 580kHz 吗？最低频率是多少？
+tps562201.ocl.01.zh_formal | zh_formal | ANSWERED | TPS562201 如何通过监测低侧FET导通压降实现逐周期谷值过流限制？
+tps562201.ocl.01.zh_colloquial | zh_colloquial | ANSWERED | TPS562201 怎么看低侧管压降来做逐周期谷值限流？
+tps562201.ocl.01.en | en | ANSWERED | How does the TPS562201 implement cycle-by-cycle valley overc
+tps562201.ocl.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS562201 如何监测 low-side FET drop 实现 cycle-by-cycle valley OC
+tps562201.eco.01.zh_formal | zh_formal | ANSWERED | TPS562201 在什么电流条件下进入脉冲跳跃 Eco-mode，进入后如何通过休眠期节能？
+tps562201.eco.01.zh_colloquial | zh_colloquial | ANSWERED | TPS562201 电流降到什么程度会开始跳脉冲，随后怎么靠休眠省电？
+tps562201.eco.01.en | en | ANSWERED | At what switch-current condition does the TPS562201 enter pu
+tps562201.eco.01.zh_en_mixed | zh_en_mixed | ANSWERED | TPS562201 在什么 current condition 进入 pulse-skipping Eco-mode，之
+== boundary_dev.jsonl: 28 cases
+boundary.mp4570.abs_max.01.zh_formal | zh_formal | ANSWERED | MP4570 的输入电压可以接到 60V 吗？
+boundary.mp4570.abs_max.01.zh_colloquial | zh_colloquial | ANSWERED | 我把 MP4570 直接接 60V 用行不行？
+boundary.mp4570.abs_max.01.en | en | ANSWERED | Can the MP4570 be operated with a 60V input?
+boundary.mp4570.abs_max.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 能长期跑在 60V 吗？
+boundary.mp4570.short_circuit.01.zh_formal | zh_formal | ANSWERED | MP4570 输出短路时软启动和电流限制如何动作，解除短路后怎样恢复？
+boundary.mp4570.short_circuit.01.zh_colloquial | zh_colloquial | ANSWERED | MP4570 输出短路后软启动和限流怎么动作，把短路去掉后会怎么恢复？
+boundary.mp4570.short_circuit.01.en | en | ANSWERED | How do MP4570 soft-start and current limiting respond to an 
+boundary.mp4570.short_circuit.01.zh_en_mixed | zh_en_mixed | ANSWERED | MP4570 output short 时 SS 和 current limit 如何动作，解除短路后怎样恢复？
+boundary.tps562201.ovp.01.zh_formal | zh_formal | INSUFFICIENT_EVIDENCE | 现有 TPS562201 资料是否给出了输出过压保护的动作阈值和具体行为？
+boundary.tps562201.ovp.01.zh_colloquial | zh_colloquial | INSUFFICIENT_EVIDENCE | 这份 TPS562201 资料有没有写清输出过压到多少会保护、怎么动作？
+boundary.tps562201.ovp.01.en | en | INSUFFICIENT_EVIDENCE | Does the available TPS562201 documentation specify an output
+boundary.tps562201.ovp.01.zh_en_mixed | zh_en_mixed | INSUFFICIENT_EVIDENCE | 现有 TPS562201 datasheet 是否给出 OVP threshold 和具体 behavior？
+boundary.selection_request.01.zh_formal | zh_formal | OUT_OF_SCOPE | 请帮我推荐一颗 5V/3A 的降压芯片。
+boundary.selection_request.01.zh_colloquial | zh_colloquial | OUT_OF_SCOPE | 有没有好用的 5V 3A 降压芯片推荐？
+boundary.selection_request.01.en | en | OUT_OF_SCOPE | Can you recommend a buck converter for 5V 3A?
+boundary.selection_request.01.zh_en_mixed | zh_en_mixed | OUT_OF_SCOPE | 帮我选个 5V/3A 的 buck 芯片？
+boundary.mp4570.junction_vs_ambient.01.zh_formal | zh_formal | INSUFFICIENT_EVIDENCE | MP4570 的结温可以到 125°C，所以环境温度 70°C 下使用肯定没问题吧？
+boundary.mp4570.junction_vs_ambient.01.zh_colloquial | zh_colloquial | INSUFFICIENT_EVIDENCE | MP4570 结温上限 125 度，那环境 70 度用肯定没事吧？
+boundary.mp4570.junction_vs_ambient.01.en | en | INSUFFICIENT_EVIDENCE | The MP4570 junction can reach 125C, so 70C ambient is defini
+boundary.mp4570.junction_vs_ambient.01.zh_en_mixed | zh_en_mixed | INSUFFICIENT_EVIDENCE | MP4570 的结温 max 125°C，那环境 70°C 用没问题吧？
+boundary.model_confusion.01.zh_formal | zh_formal | INSUFFICIENT_EVIDENCE | TPS562201 输出短路会进入 hiccup 保护，TPS54331 也是这样吗？
+boundary.model_confusion.01.zh_colloquial | zh_colloquial | INSUFFICIENT_EVIDENCE | TPS54331 短路了也是 hiccup 保护吗？跟 TPS562201 一样？
+boundary.model_confusion.01.en | en | INSUFFICIENT_EVIDENCE | Does the TPS54331 use the same hiccup protection as the TPS5
+boundary.model_confusion.01.zh_en_mixed | zh_en_mixed | INSUFFICIENT_EVIDENCE | TPS54331 的短路保护是 hiccup 模式吗？
+boundary.ambiguous_reference.01.zh_formal | zh_formal | NEEDS_CLARIFICATION | 它支持外部时钟同步吗？
+boundary.ambiguous_reference.01.zh_colloquial | zh_colloquial | NEEDS_CLARIFICATION | 那它能不能跟别的芯片同步频率？
+boundary.ambiguous_reference.01.en | en | NEEDS_CLARIFICATION | Does it support external clock synchronization?
+boundary.ambiguous_reference.01.zh_en_mixed | zh_en_mixed | NEEDS_CLARIFICATION | 它有没有 SYNC 功能？

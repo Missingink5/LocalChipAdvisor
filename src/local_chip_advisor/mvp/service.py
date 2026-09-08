@@ -25,8 +25,8 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 
 from .answering import (
+    DEFAULT_PIPELINE_PROFILE,
     AnsweringEngine,
-    evidence_set_hash_for,
     evidence_set_hash_for_records,
     run_answer_pipeline,
 )
@@ -43,10 +43,9 @@ from .contracts import (
     UserTurn,
     gen_id,
 )
-from .conversation import apply_turn, new_session_state
+from .conversation import apply_turn, deterministic_turn_ready, new_session_state
 from .index import Index
 from .understanding import understand
-
 
 PRODUCT = re.compile(
     r"(?<![A-Za-z0-9])(?:MP4570|TPS54331|TPS562201|TPS562208|LT8610)(?![A-Za-z0-9])",
@@ -115,14 +114,17 @@ def render_controlled_facts(query: str, selected: list[dict]) -> list[str]:
 
 
 def build_bundle(index: Index, intent: ResolvedIntent,
-                 query: str, max_records: int = 6) -> EvidenceBundle:
+                 query: str, max_records: int = 4,
+                 retrieval_mode: str = "auto",
+                 chat_model: str | None = None) -> EvidenceBundle:
     products = intent.product_ids or []
     if not products:
         records: list[dict] = []
     else:
         try:
-            records = index.search(query, products, mode="hybrid", top_k=max_records)
-        except Exception as exc:  # noqa: BLE001 - retrieval boundary
+            records = index.search(query, products, mode=retrieval_mode,
+                                   top_k=max_records, chat_model=chat_model)
+        except Exception as exc:
             raise RuntimeError(f"检索失败：{type(exc).__name__}: {exc}") from exc
         product_set = {p.upper() for p in products}
         records = [
@@ -167,12 +169,26 @@ def build_bundle(index: Index, intent: ResolvedIntent,
 
 
 class AdvisorService:
-    def __init__(self, manifest: Path) -> None:
+    # Class-level default so test doubles built via __new__ (which skip
+    # __init__) still resolve a profile.
+    pipeline_profile: str = DEFAULT_PIPELINE_PROFILE
+    # Default ChatClient num_ctx. With prompts measured at 3130-4382 tokens
+    # and max(num_predict)=2200, 6144 fits prompt+output with ~1400 headroom
+    # on this benchmark. Production used 8192 — kept as the runtime default
+    # in ChatClient; override here only after the prompt-side shrink lands.
+    num_ctx: int = 8192
+
+    def __init__(self, manifest: Path,
+                 pipeline_profile: str | None = None,
+                 num_ctx: int | None = None) -> None:
         self.index = Index(Path(manifest))
-        self.chat = ChatClient(model="qwen3.5:9b-q4_K_M")
+        self.num_ctx = num_ctx or self.num_ctx
+        self.chat = ChatClient(model="qwen3.5:9b-q4_K_M", num_ctx=self.num_ctx)
         self.engine = AnsweringEngine(self.chat)
         self.build_id = self.index.manifest.get("build_id", "unknown")
         self.manifest_path = Path(manifest).resolve()
+        if pipeline_profile:
+            self.pipeline_profile = pipeline_profile
 
     # ----- Multi-turn -----
 
@@ -190,7 +206,13 @@ class AdvisorService:
         `NEEDS_CLARIFICATION` and a populated `clarification` field.
         """
         proposal: dict | None = None
-        if user_turn.text.strip():
+        # Deterministic fast path: explicit single-shot questions with a clear
+        # product + known topic resolve in apply_turn() without the intent LLM.
+        # Only genuinely ambiguous turns (vague history follow-ups, unknown
+        # topic phrasing) spend an intent-model call.
+        needs_llm = bool(user_turn.text.strip()) and not deterministic_turn_ready(
+            state, user_turn.text, selected_option_id=selected_option_id)
+        if needs_llm:
             history_payload = [
                 {"turn_id": t.turn_id, "text": t.text}
                 for t in state.user_turns[-4:]
@@ -199,7 +221,7 @@ class AdvisorService:
                 proposal = self.engine.propose_intent(
                     user_turn.turn_id, user_turn.text, history_payload,
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001 - intent LLM is best-effort; deterministic fallback applies
                 proposal = None
             if isinstance(proposal, dict) and "product_ids" in proposal:
                 proposal["product_ids"] = _sanitize_products(proposal["product_ids"])
@@ -222,7 +244,9 @@ class AdvisorService:
         intent = decision.intent
         query = intent.scope_text or user_turn.text
         try:
-            bundle = build_bundle(self.index, intent, query)
+            bundle = build_bundle(self.index, intent, query,
+                                  retrieval_mode=getattr(self, "retrieval_mode", "hybrid"),
+                                  chat_model=getattr(getattr(self, "chat", None), "model", None))
         except Exception as exc:  # noqa: BLE001
             return decision.state, AnswerResult(
                 status="RETRIEVAL_ERROR",
@@ -244,7 +268,12 @@ class AdvisorService:
                 message="资料中未命中与问题相关的片段。",
                 limitations=["本次检索为空，已自动拒答。"],
             )
-        result, _diagnostics = run_answer_pipeline(intent, bundle, self.engine)
+        result, diagnostics = run_answer_pipeline(
+            intent, bundle, self.engine, profile=self.pipeline_profile,
+            audit_num_predict=getattr(self, "audit_num_predict", 900))
+        # Stash for the legacy ask() entry point so evaluate_mvp.py can
+        # surface per-stage timings + attempts.
+        self._last_diagnostics = diagnostics
         if not result.message:
             result.message = {
                 "ANSWERED": "找到支持回答的证据。",
@@ -303,6 +332,7 @@ class AdvisorService:
             limitations=list(full.limitations),
             clarification=full.clarification.model_dump() if full.clarification else None,
         )
+        result["diagnostics"] = getattr(self, "_last_diagnostics", {})
         result["evidence"] = self._evidence_dicts(full)
         result["quotes"] = [{"chunk_id": c.chunk_id, "text": c.quote or ""} for c in full.citations]
         if retrieval_only:

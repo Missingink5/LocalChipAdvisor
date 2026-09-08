@@ -17,6 +17,7 @@ import hashlib
 import json
 import logging
 import time
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import ValidationError
@@ -32,8 +33,9 @@ from .contracts import (
     AnswerGap,
     AnswerResult,
     AnswerReview,
-    Claim,
     Citation,
+    Claim,
+    ClaimReview,
     EvidenceBundle,
     ResolvedIntent,
     gen_id,
@@ -42,6 +44,7 @@ from .prompts import (
     AUDIT_SYSTEM,
     GENERATION_SYSTEM,
     REVISION_SYSTEM,
+    UNDERSTANDING_SYSTEM,
     audit_json_schema,
     audit_user_payload,
     generation_json_schema,
@@ -49,7 +52,6 @@ from .prompts import (
     revision_user_payload,
     understanding_json_schema,
     understanding_user_payload,
-    UNDERSTANDING_SYSTEM,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -128,12 +130,29 @@ def collect_citations(draft: AnswerDraft, bundle: EvidenceBundle) -> list[Citati
 
 
 def parse_draft(payload: dict[str, Any]) -> AnswerDraft:
-    """Hydrate a chat payload into AnswerDraft, attaching draft_hash."""
+    """Hydrate a chat payload into AnswerDraft, attaching draft_hash.
+
+    Defensive dedupe: the model's revision output sometimes emits two
+    claims that share a claim_id (qwen3.5 occasionally regenerates the
+    same id). The contract validator rejects duplicates fail-closed; we
+    instead drop the later occurrence here so a recoverable draft is not
+    turned into a MODEL_ERROR.
+    """
     payload = dict(payload)
     payload.setdefault("claims", [])
     payload.setdefault("coverage", "partial")
     payload.setdefault("gaps", [])
     payload.setdefault("draft_id", gen_id("draft"))
+    seen: set[str] = set()
+    deduped: list[dict] = []
+    for claim in payload["claims"]:
+        cid = claim.get("claim_id")
+        if cid is None or cid in seen:
+            LOGGER.warning("parse_draft: dropping duplicate claim_id=%r", cid)
+            continue
+        seen.add(cid)
+        deduped.append(claim)
+    payload["claims"] = deduped
     draft = AnswerDraft.model_validate(payload)
     # Inject deterministic hash based on claims+gaps+coverage (not on
     # draft_id, since the model picks those).
@@ -172,17 +191,20 @@ class AnsweringEngine:
             num_predict=600, temperature=0.0,
         )
 
-    def generate_draft(self, intent: ResolvedIntent, bundle: EvidenceBundle) -> AnswerDraft:
+    def generate_draft(self, intent: ResolvedIntent, bundle: EvidenceBundle,
+                        metrics_sink: Callable[[dict[str, Any]], None] | None = None) -> AnswerDraft:
         payload = generation_user_payload(intent, bundle)
         result = self.chat.chat(
             GENERATION_SYSTEM, payload, generation_json_schema(),
             num_predict=2200, temperature=0.0,
+            stage="generation", metrics_sink=metrics_sink,
         )
         return parse_draft(result)
 
     def revise_draft(self, intent: ResolvedIntent, bundle: EvidenceBundle,
                      draft: AnswerDraft, issues: list[HardIssue],
-                     review: AnswerReview | None) -> AnswerDraft:
+                     review: AnswerReview | None,
+                     metrics_sink: Callable[[dict[str, Any]], None] | None = None) -> AnswerDraft:
         problems = [
             {"code": i.code, "scope": i.scope, "detail": i.detail}
             for i in issues
@@ -195,15 +217,20 @@ class AnsweringEngine:
         result = self.chat.chat(
             REVISION_SYSTEM, payload, generation_json_schema(),
             num_predict=2200, temperature=0.0,
+            stage="revision", metrics_sink=metrics_sink,
         )
         return parse_draft(result)
 
     def audit_draft(self, intent: ResolvedIntent, bundle: EvidenceBundle,
-                    draft: AnswerDraft) -> AnswerReview:
+                    draft: AnswerDraft,
+                    metrics_sink: Callable[[dict[str, Any]], None] | None = None,
+                    stage: str = "audit",
+                    num_predict: int = 800) -> AnswerReview:
         payload = audit_user_payload(intent.scope_text or "用户已确认的问题", draft, bundle)
         result = self.chat.chat(
             AUDIT_SYSTEM, payload, audit_json_schema(),
-            num_predict=900, temperature=0.0,
+            num_predict=num_predict, temperature=0.0,
+            stage=stage, metrics_sink=metrics_sink,
         )
         return parse_review(result, draft, evidence_set_hash_for(bundle))
 
@@ -259,15 +286,84 @@ def finalize_answer(intent: ResolvedIntent, bundle: EvidenceBundle,
     )
 
 
+PIPELINE_PROFILES: tuple[str, ...] = ("fast", "audit", "strict")
+DEFAULT_PIPELINE_PROFILE = "strict"  # re-measured on dev cases in Phase 4
+
+
+def _drop_claims_with_issues(draft: AnswerDraft, issues: list[HardIssue]) -> AnswerDraft:
+    """Deterministically remove claims that failed hard validation.
+
+    Used by the fast/audit profiles, which do not run the repair revision:
+    a claim that fails a deterministic check must never reach the rendered
+    answer, so it is dropped instead of revised.
+    """
+    blocked = {i.scope for i in issues if i.scope.startswith("claim_")}
+    if any(i.scope == "draft" for i in issues):
+        blocked |= {c.claim_id for c in draft.claims}
+    kept = [c for c in draft.claims if c.claim_id not in blocked]
+    if len(kept) == len(draft.claims):
+        return draft
+    payload = json.loads(draft.model_dump_json())
+    payload["claims"] = [c.model_dump() for c in kept]
+    return parse_draft(payload)
+
+
+def synth_review(draft: AnswerDraft, bundle: EvidenceBundle) -> AnswerReview:
+    """Deterministic all-supported review for the fast profile.
+
+    The audit LLM is skipped, so every claim that survived hard validation is
+    treated as supported; answers_question follows the model-declared
+    coverage. Hard validation remains the gate — nothing is unbound from its
+    evidence_ids.
+    """
+    review = AnswerReview(
+        review_id=gen_id("review"),
+        claim_reviews=[
+            ClaimReview(
+                claim_id=c.claim_id, verdict="supported", problem_codes=[],
+                supporting_evidence_ids=list(c.evidence_ids),
+                note_zh="fast profile：未运行 LLM audit，仅通过确定性硬校验。",
+            )
+            for c in draft.claims
+        ],
+        answers_question=bool(draft.claims) and draft.coverage != "none",
+        coverage=draft.coverage,
+        conflicts=[],
+    )
+    object.__setattr__(review, "draft_hash", draft.draft_hash)
+    object.__setattr__(review, "evidence_set_hash", evidence_set_hash_for(bundle))
+    return review
+
+
 def run_answer_pipeline(intent: ResolvedIntent, bundle: EvidenceBundle,
                         engine: AnsweringEngine,
-                        *, max_revisions: int = 1) -> tuple[AnswerResult, dict]:
-    """Drive draft → audit → (optional revision) → finalize.
+                        *, max_revisions: int = 1,
+                        profile: str = DEFAULT_PIPELINE_PROFILE,
+                        audit_num_predict: int = 900) -> tuple[AnswerResult, dict]:
+    """Drive draft → hard validation → (audit) → (revision) → finalize.
+
+    Profile semantics (the deterministic hard validation always gates what
+    may be rendered):
+      - strict: generation → hard → audit → revision when issues/unsupported
+        → re-hard → re-audit → finalize. Full repair loop (default).
+      - audit:  generation → hard → audit → finalize. Claims failing hard
+        validation are dropped deterministically; unsupported audit claims
+        are dropped by consolidate_claims_for_render. No revision call.
+      - fast:   generation → hard → finalize (synthetic all-supported
+        review). No audit call. Deterministic gate only.
 
     Returns the AnswerResult and a diagnostics dict (stage timings, attempts).
     """
+    if profile not in PIPELINE_PROFILES:
+        raise ValueError(f"Unknown pipeline profile: {profile!r}")
     timings: dict[str, float] = {}
     attempts: list[dict] = []
+    chat_metrics: dict[str, dict] = {}
+
+    def _metric_sink(stage: str) -> Callable[[dict], None]:
+        def _sink(metrics: dict) -> None:
+            chat_metrics[stage] = metrics
+        return _sink
 
     def _record(stage: str, status: str, started: float, **extra) -> None:
         timings[stage + "_seconds"] = round(time.perf_counter() - started, 3)
@@ -275,46 +371,80 @@ def run_answer_pipeline(intent: ResolvedIntent, bundle: EvidenceBundle,
 
     started = time.perf_counter()
     try:
-        draft = engine.generate_draft(intent, bundle)
+        draft = engine.generate_draft(intent, bundle, metrics_sink=_metric_sink("generation"))
     except (ChatError, ValidationError, ValueError) as exc:
         _record("generation", "failed", started, error=str(exc))
-        return _model_error_result(bundle, intent, exc), {"timings": timings, "attempts": attempts}
+        return _model_error_result(bundle, intent, exc), {
+            "timings": timings, "attempts": attempts, "profile": profile,
+            "chat_metrics": chat_metrics}
     _record("generation", "ok", started, claims=len(draft.claims))
 
     started = time.perf_counter()
     issues = run_hard_validation(draft, bundle)
     _record("hard_validation", "issues" if issues else "ok", started, count=len(issues))
 
-    started = time.perf_counter()
-    try:
-        review = engine.audit_draft(intent, bundle, draft)
-    except (ChatError, ValidationError, ValueError) as exc:
-        _record("audit", "failed", started, error=str(exc))
-        return _model_error_result(bundle, intent, exc), {"timings": timings, "attempts": attempts}
-    _record("audit", "ok", started)
-
-    if (issues or any(cr.verdict != "supported" for cr in review.claim_reviews)) and max_revisions > 0:
-        started = time.perf_counter()
-        try:
-            draft = engine.revise_draft(intent, bundle, draft, issues, review)
-        except (ChatError, ValidationError, ValueError) as exc:
-            _record("revision", "failed", started, error=str(exc))
-            return _model_error_result(bundle, intent, exc), {"timings": timings, "attempts": attempts}
-        _record("revision", "ok", started, claims=len(draft.claims))
+    if profile in ("fast", "audit") and issues:
+        # No repair loop in these profiles: claims that failed a
+        # deterministic check are dropped, not revised.
+        draft = _drop_claims_with_issues(draft, issues)
         issues = run_hard_validation(draft, bundle)
+        _record("hard_validation_drop", "ok" if not issues else "issues", started,
+                count=len(issues), remaining_claims=len(draft.claims))
+
+    if profile in ("fast", "audit") and not draft.claims:
+        # Deterministic gate emptied the draft: nothing for the audit LLM to
+        # check. finalize_answer turns the empty supported set into
+        # INSUFFICIENT_EVIDENCE with the draft gaps as the cause.
+        review = synth_review(draft, bundle)
+    elif profile == "fast":
+        review = synth_review(draft, bundle)
+    else:
         started = time.perf_counter()
         try:
-            review = engine.audit_draft(intent, bundle, draft)
+            review = engine.audit_draft(intent, bundle, draft,
+                                        metrics_sink=_metric_sink("audit"),
+                                        num_predict=audit_num_predict)
         except (ChatError, ValidationError, ValueError) as exc:
-            _record("revision_audit", "failed", started, error=str(exc))
-            return _model_error_result(bundle, intent, exc), {"timings": timings, "attempts": attempts}
-        _record("revision_audit", "ok", started)
+            _record("audit", "failed", started, error=str(exc))
+            return _model_error_result(bundle, intent, exc), {
+                "timings": timings, "attempts": attempts, "profile": profile,
+                "chat_metrics": chat_metrics}
+        _record("audit", "ok", started)
+
+        if (profile == "strict"
+                and (issues or any(cr.verdict != "supported" for cr in review.claim_reviews))
+                and max_revisions > 0):
+            started = time.perf_counter()
+            try:
+                draft = engine.revise_draft(intent, bundle, draft, issues, review,
+                                            metrics_sink=_metric_sink("revision"))
+            except (ChatError, ValidationError, ValueError) as exc:
+                _record("revision", "failed", started, error=str(exc))
+                return _model_error_result(bundle, intent, exc), {
+                    "timings": timings, "attempts": attempts, "profile": profile,
+                    "chat_metrics": chat_metrics}
+            _record("revision", "ok", started, claims=len(draft.claims))
+            issues = run_hard_validation(draft, bundle)
+            started = time.perf_counter()
+            try:
+                review = engine.audit_draft(intent, bundle, draft,
+                                            metrics_sink=_metric_sink("revision_audit"),
+                                            stage="revision_audit",
+                                            num_predict=audit_num_predict)
+            except (ChatError, ValidationError, ValueError) as exc:
+                _record("revision_audit", "failed", started, error=str(exc))
+                return _model_error_result(bundle, intent, exc), {
+                    "timings": timings, "attempts": attempts, "profile": profile,
+                    "chat_metrics": chat_metrics}
+            _record("revision_audit", "ok", started)
 
     started = time.perf_counter()
     result = finalize_answer(intent, bundle, draft, review)
     _record("finalize", result.status, started)
 
-    return result, {"timings": timings, "attempts": attempts, "issues": [i.__dict__ for i in issues]}
+    return result, {"timings": timings, "attempts": attempts,
+                    "issues": [i.__dict__ for i in issues], "profile": profile,
+                    "chat_metrics": chat_metrics}
 
 
 def _model_error_result(bundle: EvidenceBundle, intent: ResolvedIntent, exc: Exception) -> AnswerResult:

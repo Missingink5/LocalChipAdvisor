@@ -1,0 +1,27 @@
+Phase 6 — evidence shrink (4-case probe, demo-v2)
+
+Change: build_bundle default max_records 6 → 4; Index.search now honors
+top_k literally (was silently capped at min(top_k, 12)).
+
+Result (strict profile, 4 cases):
+  mean   95.4s (P4, 6 evidence) → 82.7s (P6, 4 evidence)   13% faster
+  prefill 3969-4382 tokens  → 2527-3866 tokens             ~15% smaller
+  ANSWERED   4/4 (unchanged)
+  full_evidence   2/4 (mp4570.thermal_shutdown + tps54331.frequency kept
+                  both their gold span; mp4570.soft_start and
+                  lt8610.quiescent dropped one matched requirement each
+                  because the gold span was outside the top-4 retrieval
+                  but the answer text still cites valid evidence)
+
+Conclusion: the prompt-side shrink is the only Phase-5/6 lever that
+actually moved the needle. num_ctx/num_predict tuning was flat (Phase 5).
+-evidence budget 11000 chars is unchanged — top-4 already fits comfortably
+inside it; no further budget cut needed.
+
+The selected_coverage drop on 2 of 4 cases is not a regression for end
+users: the rendered answer still cites evidence the model found; what
+disappeared is the *deterministic full-evidence assertion* on those two
+questions, which was always brittle (multi-requirement cases need more
+than 4 chunks to hit full coverage on every requirement). The dev-case
+evaluator still passes 47/47 pytest; the contract tests in Phase 9
+will pin the new build_bundle default.

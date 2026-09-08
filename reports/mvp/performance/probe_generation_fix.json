@@ -1,0 +1,70 @@
+{
+  "query": "MP4570 太热会自己停吗？",
+  "status": "ANSWERED",
+  "wall": 62.58,
+  "answer": "MP4570 内置热关断保护，当结温超过典型值 170°C 时会自动关闭。\n\n当温度降至 160°C 以下时，芯片会自动重新开启。\n\n该热关断机制包含约 10°C 的迟滞，防止频繁启停。\n\n内部热关断电路可保护器件免受永久损坏。",
+  "metrics": [
+    {
+      "stage": "chat",
+      "model": "qwen3.5:9b-q4_K_M",
+      "wall_seconds": 36.1431,
+      "ollama_total_seconds": 36.1227,
+      "load_seconds": 6.4923,
+      "prompt_tokens": 3651,
+      "prompt_eval_seconds": 1.9809,
+      "prompt_tokens_per_second": 1843.1,
+      "output_tokens": 1097,
+      "eval_seconds": 27.6134,
+      "output_tokens_per_second": 39.7,
+      "done_reason": "stop",
+      "num_ctx": 8192,
+      "num_predict": 2200,
+      "temperature": 0.0
+    },
+    {
+      "stage": "chat",
+      "model": "qwen3.5:9b-q4_K_M",
+      "wall_seconds": 23.4842,
+      "ollama_total_seconds": 23.4826,
+      "load_seconds": 0.0118,
+      "prompt_tokens": 4108,
+      "prompt_eval_seconds": 2.1048,
+      "prompt_tokens_per_second": 1951.7,
+      "output_tokens": 836,
+      "eval_seconds": 21.1257,
+      "output_tokens_per_second": 39.6,
+      "done_reason": "stop",
+      "num_ctx": 8192,
+      "num_predict": 900,
+      "temperature": 0.0
+    }
+  ],
+  "citations": [
+    {
+      "marker": "[1]",
+      "chunk_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0",
+      "doc_id": "doc:mps-mp4570-datasheet:a89da141cb7c",
+      "revision": "1.01",
+      "page_start": 16,
+      "page_end": 18,
+      "source_url": "https://www.monolithicpower.com/en/documentview/productdocument/index/version/2/document_type/Datasheet/lang/en/sku/MP4570GF-Z/document_id/840/",
+      "quote": "",
+      "products": [
+        "MP4570"
+      ]
+    },
+    {
+      "marker": "[2]",
+      "chunk_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0004-0004:seq0064:structure-chunker-v1:4639c42065b845cc",
+      "doc_id": "doc:mps-mp4570-datasheet:a89da141cb7c",
+      "revision": "1.01",
+      "page_start": 4,
+      "page_end": 4,
+      "source_url": "https://www.monolithicpower.com/en/documentview/productdocument/index/version/2/document_type/Datasheet/lang/en/sku/MP4570GF-Z/document_id/840/",
+      "quote": "",
+      "products": [
+        "MP4570"
+      ]
+    }
+  ]
+}

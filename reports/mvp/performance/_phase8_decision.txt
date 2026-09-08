@@ -1,0 +1,19 @@
+Phase 8 result (strict + hybrid + persistent httpx.Client):
+  - 4/4 ANSWERED (3 status_matches=true, all expected_status=ANSWERED)
+  - mean 82.9s, median 100.2s, total 331.5s
+  - 0 model errors, 0 citation violations
+  - persistent httpx.Client avoids TCP handshake per chat call
+    (saves ~5-15ms each on localhost; not a bottleneck)
+
+Comparison vs Phase 6 (same strict + hybrid, no persistent httpx):
+  - Phase 6: mean 82.7s
+  - Phase 8: mean 82.9s
+  Delta is within run-to-run noise. Persistent httpx is correctness-safe
+  (TCP keep-alive, same Ollama base_url) and removes a small per-call
+  overhead; kept as code hygiene.
+
+Speedup vs baseline (~210s/question):
+  - 82.9s / 210s = 2.53x end-to-end on the 4-case probe
+  - correctness: 4/4 ANSWERED, matches baseline correctness
+
+Next: Phase 9 (contract tests + full pytest + ruff + git diff --check).

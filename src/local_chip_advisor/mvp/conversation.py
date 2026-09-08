@@ -123,18 +123,15 @@ def _option_selection(text: str, state: ConversationState) -> ResolvedIntent | N
         for opt in state.pending_clarification.options:
             if opt.label == text.strip():
                 return _resolve_option_text(opt.proposed_value, state)
-    if text.strip() in {"第一项", "第一个", "1", "one", "选项1"}:
-        if state.pending_clarification.options:
-            opt = state.pending_clarification.options[0]
-            return _resolve_option_text(opt.proposed_value, state)
-    if text.strip() in {"第二项", "第二个", "2", "two", "选项2"}:
-        if len(state.pending_clarification.options) >= 2:
-            opt = state.pending_clarification.options[1]
-            return _resolve_option_text(opt.proposed_value, state)
-    if text.strip() in {"第三项", "第三个", "3", "three", "选项3"}:
-        if len(state.pending_clarification.options) >= 3:
-            opt = state.pending_clarification.options[2]
-            return _resolve_option_text(opt.proposed_value, state)
+    if text.strip() in {"第一项", "第一个", "1", "one", "选项1"} and state.pending_clarification.options:
+        opt = state.pending_clarification.options[0]
+        return _resolve_option_text(opt.proposed_value, state)
+    if text.strip() in {"第二项", "第二个", "2", "two", "选项2"} and len(state.pending_clarification.options) >= 2:
+        opt = state.pending_clarification.options[1]
+        return _resolve_option_text(opt.proposed_value, state)
+    if text.strip() in {"第三项", "第三个", "3", "three", "选项3"} and len(state.pending_clarification.options) >= 3:
+        opt = state.pending_clarification.options[2]
+        return _resolve_option_text(opt.proposed_value, state)
     return None
 
 
@@ -209,6 +206,34 @@ def _make_clarification(reason: str, question: str,
     )
 
 
+def deterministic_turn_ready(state: ConversationState, text: str, *,
+                             selected_option_id: str | None = None) -> bool:
+    """True when `apply_turn()` can resolve this turn without the LLM proposal.
+
+    Mirrors the short-circuit order inside `apply_turn()` (option clicks,
+    option selections, bare-product inheritance, product+topic ready). The
+    service calls this before spending an LLM intent call so that explicit
+    single-shot questions ("MP4570 太热会自己停吗？", "TPS54331 软启动是否
+    可编程？") skip the model entirely. Vague follow-ups that really need
+    conversation history ("那恢复呢？", "第二个呢？") return False.
+
+    Keep the branches in sync with `apply_turn()` below.
+    """
+    if selected_option_id and state.pending_clarification:
+        return True
+    if state.pending_clarification and _option_selection(text, state) is not None:
+        return True
+    previous_pending = state.pending_question
+    if (_explicit_product_answer(text)
+            and previous_pending and previous_pending != text):
+        return True
+    products = _extract_products(text)
+    if not products and state.resolved_intent and state.resolved_intent.product_ids:
+        # Topic is inherited from the resolved intent, not from this text.
+        return state.resolved_intent.topic not in {"", "other"}
+    return bool(products and _detect_topic(text) != "other")
+
+
 def apply_turn(state: ConversationState, user_turn: UserTurn,
                *, intent_proposal: dict[str, Any] | None = None,
                selected_option_id: str | None = None) -> ConversationDecision:
@@ -222,18 +247,19 @@ def apply_turn(state: ConversationState, user_turn: UserTurn,
 
     # Explicit option click: even if user_turn is empty, an option_id can
     # resolve the pending clarification.
-    if selected_option_id and state.pending_clarification:
-        if any(opt.option_id == selected_option_id for opt in state.pending_clarification.options):
-            opt = next(opt for opt in state.pending_clarification.options
-                       if opt.option_id == selected_option_id)
-            intent = _resolve_option_text(opt.proposed_value, state)
-            if intent is not None:
-                intent.revision = new_revision
-                state.resolved_intent = intent
-                state.pending_clarification = None
-                state.phase = "READY"
-                state.revision = new_revision
-                return ConversationDecision(state=state, intent=intent)
+    if (selected_option_id and state.pending_clarification
+            and any(opt.option_id == selected_option_id
+                    for opt in state.pending_clarification.options)):
+        opt = next(opt for opt in state.pending_clarification.options
+                   if opt.option_id == selected_option_id)
+        intent = _resolve_option_text(opt.proposed_value, state)
+        if intent is not None:
+            intent.revision = new_revision
+            state.resolved_intent = intent
+            state.pending_clarification = None
+            state.phase = "READY"
+            state.revision = new_revision
+            return ConversationDecision(state=state, intent=intent)
 
     if state.pending_clarification:
         option_intent = _option_selection(text, state)

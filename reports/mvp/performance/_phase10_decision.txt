@@ -1,0 +1,35 @@
+Phase 10 result (14-case answers-only, strict + hybrid + persistent httpx):
+
+The 14-case run completed in full (the user's "先这样" instruction arrived
+while cases were still queued; the background task finished naturally):
+
+  - 14/14 ANSWERED, 14/14 status_matches
+  - mean 79.3s, median 69.8s, min 42.2s, max 158.6s
+  - total 1110.6s = 18.5 min (vs baseline 50 min)
+  - 0 MODEL_ERROR, 0 INSUFFICIENT_EVIDENCE, 0 citation violations
+
+Speedup vs baseline:
+  - per-question: 210 / 79.3 = 2.65x (spec target >=3x — not met on this run)
+  - total 14-case wall time: 50 / 18.5 = 2.70x
+  - 14-case budget (<=15min / 900s): 18.5min — over budget by ~3.5 min
+
+The over-budget cases are dominated by one cold-start LT8610 case
+(158.6s, pays ~6.5s model load + warm-up). Median is 69.8s; with one
+outlier removed, mean is ~74s. The 11/14 interim read at 767s (69.7s
+mean) was within budget; the last three cases (one of which was
+that cold-start LT8610) pushed past it.
+
+Honest summary:
+  - 2.65x per-question speedup (target was 3x)
+  - 14-case wall time 18.5 min (target was <=15 min)
+
+The user is aware of both gaps; the run still produces 14/14 ANSWERED
+on the dev split, which is the harder correctness bar to clear.
+
+Selected 14-case subset: mp4570.thermal_shutdown.01.{zh_formal,zh_colloquial,
+en,zh_en_mixed}, tps54331.soft_start.01.{zh_formal,zh_colloquial,en,
+zh_en_mixed}, tps562201.soft_start.01.{zh_formal,zh_colloquial,en,
+zh_en_mixed}, lt8610.quiescent.01.{zh_formal,zh_colloquial}.
+
+Note: tps562208 has no dev/boundary_dev cases (only 4 products in dev),
+so the 14-case subset covers mp4570=4, tps54331=4, tps562201=4, lt8610=2.

@@ -1,0 +1,239 @@
+{
+  "split": "dev",
+  "manifest": "D:\\LocalChipAdvisor\\data\\mvp\\demo-v2\\manifest.json",
+  "metric": "All AND requirements, at least one complete OR span each; hash and page bound",
+  "answer_caveat": "Status agreement is not a semantic factuality audit.",
+  "mode": "answers",
+  "counts": {
+    "cases": 4
+  },
+  "by_language": {},
+  "per_case": [
+    {
+      "case_id": "mp4570.thermal_shutdown.01.zh_formal",
+      "language": "zh_formal",
+      "expected_status": "ANSWERED",
+      "answer": {
+        "status": "ANSWERED",
+        "timings": {
+          "total_seconds": 46.714
+        },
+        "status_matches": true,
+        "selected_coverage": {
+          "required_count": 1,
+          "matched_requirements": [
+            "protection_behavior"
+          ],
+          "full_evidence": true
+        },
+        "citation_violations": [],
+        "answer_text": "MP4570 的过温关断保护通常在结温超过 170°C 时触发。\n\n当结温降至低于 160°C 时，MP4570 会重新开启。\n\n该芯片的过温关断迟滞约为 10°C。\n\nMP4570 的过温关断阈值在规格书中被表征为 170°C，迟滞为 10°C。",
+        "message": "找到支持回答的证据。",
+        "diagnostics": {
+          "timings": {
+            "generation_seconds": 43.772,
+            "hard_validation_seconds": 0.002,
+            "finalize_seconds": 0.0
+          },
+          "attempts": [
+            {
+              "stage": "generation",
+              "status": "ok",
+              "claims": 4
+            },
+            {
+              "stage": "hard_validation",
+              "status": "ok",
+              "count": 0
+            },
+            {
+              "stage": "finalize",
+              "status": "ANSWERED"
+            }
+          ],
+          "issues": [],
+          "profile": "fast"
+        }
+      }
+    },
+    {
+      "case_id": "mp4570.soft_start.01.en",
+      "language": "en",
+      "expected_status": "ANSWERED",
+      "answer": {
+        "status": "ANSWERED",
+        "timings": {
+          "total_seconds": 29.62
+        },
+        "status_matches": true,
+        "selected_coverage": {
+          "required_count": 2,
+          "matched_requirements": [],
+          "full_evidence": false
+        },
+        "citation_violations": [],
+        "answer_text": "MP4570 通过连接外部电容在 SS 引脚和 GND 之间来设置软启动时间。",
+        "message": "找到支持回答的证据。",
+        "diagnostics": {
+          "timings": {
+            "generation_seconds": 26.651,
+            "hard_validation_seconds": 0.0,
+            "hard_validation_drop_seconds": 0.001,
+            "finalize_seconds": 0.0
+          },
+          "attempts": [
+            {
+              "stage": "generation",
+              "status": "ok",
+              "claims": 3
+            },
+            {
+              "stage": "hard_validation",
+              "status": "issues",
+              "count": 2
+            },
+            {
+              "stage": "hard_validation_drop",
+              "status": "ok",
+              "count": 0,
+              "remaining_claims": 1
+            },
+            {
+              "stage": "finalize",
+              "status": "ANSWERED"
+            }
+          ],
+          "issues": [],
+          "profile": "fast"
+        }
+      }
+    },
+    {
+      "case_id": "lt8610.quiescent.01.zh_formal",
+      "language": "zh_formal",
+      "expected_status": "ANSWERED",
+      "answer": {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "timings": {
+          "total_seconds": 44.325
+        },
+        "status_matches": false,
+        "selected_coverage": {
+          "required_count": 2,
+          "matched_requirements": [],
+          "full_evidence": false
+        },
+        "citation_violations": [],
+        "answer_text": "本次未能生成可发布的回答。",
+        "message": "本次未能生成可发布的回答。",
+        "diagnostics": {
+          "timings": {
+            "generation_seconds": 41.608,
+            "hard_validation_seconds": 0.001,
+            "hard_validation_drop_seconds": 0.001,
+            "finalize_seconds": 0.0
+          },
+          "attempts": [
+            {
+              "stage": "generation",
+              "status": "ok",
+              "claims": 4
+            },
+            {
+              "stage": "hard_validation",
+              "status": "issues",
+              "count": 4
+            },
+            {
+              "stage": "hard_validation_drop",
+              "status": "issues",
+              "count": 1,
+              "remaining_claims": 0
+            },
+            {
+              "stage": "finalize",
+              "status": "INSUFFICIENT_EVIDENCE"
+            }
+          ],
+          "issues": [
+            {
+              "code": "empty_draft",
+              "scope": "draft",
+              "detail": "模型未提供任何事实"
+            }
+          ],
+          "profile": "fast"
+        }
+      }
+    },
+    {
+      "case_id": "tps54331.frequency.01.zh_en_mixed",
+      "language": "zh_en_mixed",
+      "expected_status": "ANSWERED",
+      "answer": {
+        "status": "ANSWERED",
+        "timings": {
+          "total_seconds": 30.405
+        },
+        "status_matches": true,
+        "selected_coverage": {
+          "required_count": 1,
+          "matched_requirements": [
+            "fixed_frequency"
+          ],
+          "full_evidence": true
+        },
+        "citation_violations": [],
+        "answer_text": "TPS54331 采用固定频率的峰值电流模式控制。",
+        "message": "找到支持回答的证据。",
+        "diagnostics": {
+          "timings": {
+            "generation_seconds": 27.385,
+            "hard_validation_seconds": 0.0,
+            "hard_validation_drop_seconds": 0.0,
+            "finalize_seconds": 0.0
+          },
+          "attempts": [
+            {
+              "stage": "generation",
+              "status": "ok",
+              "claims": 2
+            },
+            {
+              "stage": "hard_validation",
+              "status": "issues",
+              "count": 1
+            },
+            {
+              "stage": "hard_validation_drop",
+              "status": "ok",
+              "count": 0,
+              "remaining_claims": 1
+            },
+            {
+              "stage": "finalize",
+              "status": "ANSWERED"
+            }
+          ],
+          "issues": [],
+          "profile": "fast"
+        }
+      }
+    }
+  ],
+  "answer_summary": {
+    "status_counts": {
+      "ANSWERED": 3,
+      "INSUFFICIENT_EVIDENCE": 1
+    },
+    "model_error": 0,
+    "insufficient_evidence": 1,
+    "citation_violations": 0,
+    "seconds": {
+      "count": 4,
+      "total": 151.1,
+      "mean": 37.8,
+      "median": 44.3
+    }
+  }
+}

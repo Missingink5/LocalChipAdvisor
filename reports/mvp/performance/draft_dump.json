@@ -1,0 +1,165 @@
+{
+  "query": "MP4570 太热会自己停吗？",
+  "records": [
+    {
+      "chunk_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0",
+      "text": "Thermal Shutdown Protection\nThe thermal shutdown is employed in MP4570 by \nmonitoring the IC temperature internally. If the \njunction temperature exceeds the threshold \n(typically 170oC), the regulator shuts off and it will \nturns on again when the temperature drops \nbelow 160oC. There is a ~10oC hysteresis.\nPower Good\nMP4570 has one power good (PG) pin out to \nindicate the normal operation after soft start time.  \nThe PG pin is the open drain of an internal \nMOSFET. It should be connected to VDD or \nexternal voltage source through a resistor (i.e. \n100kohm). After the input voltage is applied, the \nMOSFET is turned on and the PG pin is pulled to \nGND before SS is ready. After the FB voltage \nreaches 90% REF voltage, the MOSFET turns off \nand PG pin is pulled to high by external voltage \nsource. When the FB voltage drops to 85% REF \nvoltage, the PG voltage is pulled to GND to \nindicate a failure output status.\nFloating Driver and Bootstrap Charging\nAn external bootstrap capacitor (0.1µF typically) \nbetween BST pin and SW pin powers the floating \npower MOSFET driver. This floating driver has its \nown UVLO protection. This UVLO’s rising\nthreshold is 2.3V with a hysteresis of 300mV. \nThe driver’s UVLO is soft-start related: When the \nbootstrap voltage hits its UVLO threshold, the \nsoft-start circuit resets. When bootstrap UVLO is \ngone, the reset is off and then the soft-start \nprocess resumes."
+    },
+    {
+      "chunk_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0004-0004:seq0064:structure-chunker-v1:4639c42065b845cc",
+      "text": "MP4570 Rev. 1.01 \nwww.MonolithicPower.com \n4 \n1/4/2017 \nMPS Proprietary Information. Patent Protected. Unauthorized Photocopy and Duplication Prohibited. \n \n© 2017 MPS. All Rights Reserved.\nABSOLUTE MAXIMUM RATINGS (1) \nSupply Voltage VIN  ...................................... 60V \nVSW ..................................... –0.5V to (VIN+0.5V) \nVBS  ....................................................... VSW + 6V \nAll Other Pins ................................. –0.3V to +6V \nEN Sink Current ....................................... 150μA \nContinuous Power Dissipation  \n(TA = 25°C) (2) \nTSSOP-20 EP .......................................... 2.78W \nJunction Temperature ............................... 150°C \nLead Temperature  ................................... 260°C \nStorage Temperature .............. –65°C to +150°C \nRecommended Operating Conditions \nSupply Voltage VIN  .......................... 4.5V to 55V \nOutput Voltage VOUT ........................ 1V to 0.9·VIN \nOperating Junction Temp. (TJ). -40°C to +125°C\nThermal Resistance (3)         θJA        θJC \nTSSOP-20 EP ......................... 45 ...... 10 ... °C/W\nNotes: \n1) \nAbsolute maximum ratings are rated under room \ntemperature unless otherwise noted. Exceeding these \nratings may damage the device. \n2) \nThe maximum allowable power dissipation is a function of \nthe maximum junction temperature TJ (MAX), the junction-\nto-ambient thermal resistance θJA, and the ambient \ntemperature TA. The maximum allowable continuous \npower dissipation at any ambient temperature is \ncalculated by PD (MAX) = (TJ (MAX)-TA)/θJA. Exceeding \nthe maximum allowable power dissipation will cause \nexcessive die temperature, and the regulator will go into \nthermal shutdown. Internal thermal shutdown circuitry \nprotects the device from permanent damage. \n3) \nMeasured on JESD51-7, 4-layer PCB."
+    },
+    {
+      "chunk_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0001-0002:seq0001:structure-chunker-v1:b5df0013d7230adf",
+      "text": "The MP4570 uses peak current mode control to \nregulate the output voltage. The chip provides \nover current protection with valley current \ndetection which is used to avoid current running \nway. Also it has accurate and reliable over \nvoltage protection, and auto recovery thermal \nprotection. In addition, the optional external soft \nstart is available. Enable and power good \nindication function can be used to power track \neasily. In order to increase the efficiency, \nMP4570 will automatically scaling down the \nswitching \nfrequency \nwhen \nload \nis \nlight. \nMeanwhile, the low side MOSFET will be turned \noff to reduce driver loss when zero inductor \ncurrent is detected. MP4570 also features as a \nfully integrated solution with both high side and \nlow \nside \npower \nMOSFETs. \nSynchronous \noperation mode with integrated low side \nMOSFET is much helpful to reduce the \nconduction loss and also beneficial to reduce \nexternal components space and save the cost.\nThe MP4570 is available in a TSSOP-20 EP with \nexposed pad package."
+    },
+    {
+      "chunk_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0006-0007:seq0072:structure-chunker-v1:86d3f6d75fb1c2b3",
+      "text": "Power Good Delay  \ntPG_DL\nVOUT Rising \n8 \n22 \n37 \nμs\nVOUT Falling \n8 \n21 \n33 \nμs\nFrequency SYNC\nSYNC Leakage Current \nILKG_SYNC\n \n \n10 \n100\nnA\nSYNC Frequency Range \nfSYNC \n \n100 \n \n1000\nkHz\nThermal\nThermal Shutdown (4) \nTSD \n \n150 \n170 \n \n°C\nThermal Shutdown Hysteresis (4) \nTSD_HYS \n \n \n10 \n \n°C\nNote:\n4) \nDerived from bench characterization. Not tested in production."
+    },
+    {
+      "chunk_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0001-0001:seq0002:structure-chunker-v1:5a2e69b0cf25bb99",
+      "text": "FEATURES\n \nWide Input Voltage Range: 4.5V to 55V \n \n90mΩ and 70mΩ Internal High and Low \nPower MOSFETs \n \nPeak Current Mode Control \n \nProgrammable Switching Frequency  \n \nStable Independent on Output Capacitors  \n \nOptional External Soft Start  \n \nOCP Protection with Valley Current \nDetection \n \nSupport External SYNC Clock \n \nOVP Protection \n \nCurrent Limit Decreasing during Output \nShort for Better Thermal Performance \n \nPower Good Indication \n \nThermal Shutdown Protection \n \nAvailable in a TSSOP-20 EP Package."
+    },
+    {
+      "chunk_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0017:seq0125:structure-chunker-v1:2a04004104273611",
+      "text": "MP4570 Rev. 1.01 \nwww.MonolithicPower.com \n16 \n1/4/2017 \nMPS Proprietary Information. Patent Protected. Unauthorized Photocopy and Duplication Prohibited. \n \n© 2017 MPS. All Rights Reserved.\nthe inductor valley current is lower than a certain \ncurrent threshold which is called the valley \ncurrent limit. It is very useful to avoid the inductor \ncurrent to run away. Also, both the peak current \nlimit and the valley current limit value are \ndependent on the FB voltage. If the feedback \noutput voltage is higher than the 50%xREF, the \ncurrent limit value is as the normal value. If the \nfeedback output voltage is lower than 50%xRFF, \nthe current limit will decrease and drop to the half \nnormal value when the feedback output voltage \nis zero. This feature is very helpful to reduce the \nOCP thermal dissipation which may especially \nget worse when the output voltage is shorted. \nAlso, it is very helpful to reduce the high inrush \ncurrent during the startup.\nUVLO Protection\nThe MP4570 has input under voltage lockout \nprotection (UVLO). Assuming the EN is active, \nthe MP4570 is powered on when the input \nvoltage is higher than the UVLO rising threshold \nand is powered off when input voltage drops \nbelow the UVLO falling threshold."
+    }
+  ],
+  "draft": {
+    "draft_id": "ans_draft_1748291056",
+    "draft_hash": "71d07e6765a8bef0a1d0dc16a9bb7462",
+    "claims": [
+      {
+        "claim_id": "claim_1",
+        "text_zh": "MP4570 内部监测结温，当结温超过典型阈值 170°C 时会自动关断。",
+        "kind": "document_fact",
+        "product_ids": [
+          "MP4570"
+        ],
+        "evidence_ids": [
+          "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0"
+        ],
+        "anchors": [],
+        "numeric_bindings": [
+          {
+            "claim_value": "",
+            "unit": "",
+            "role": "junction_shutdown_trigger",
+            "evidence_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0",
+            "source_quote": "If the junction temperature exceeds the threshold (typically 170oC), the regulator shuts off",
+            "value_kind": "typical"
+          }
+        ],
+        "qualifier_bindings": []
+      },
+      {
+        "claim_id": "claim_2",
+        "text_zh": "当温度降至 160°C 以下时，芯片会自动重新开启。",
+        "kind": "document_fact",
+        "product_ids": [
+          "MP4570"
+        ],
+        "evidence_ids": [
+          "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0"
+        ],
+        "anchors": [],
+        "numeric_bindings": [
+          {
+            "claim_value": "",
+            "unit": "",
+            "role": "junction_recovery_threshold",
+            "evidence_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0",
+            "source_quote": "it will turns on again when the temperature drops below 160oC",
+            "value_kind": "typical"
+          }
+        ],
+        "qualifier_bindings": []
+      },
+      {
+        "claim_id": "claim_3",
+        "text_zh": "该热关断机制具有约 10°C 的迟滞，防止频繁重启。",
+        "kind": "document_fact",
+        "product_ids": [
+          "MP4570"
+        ],
+        "evidence_ids": [
+          "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0"
+        ],
+        "anchors": [],
+        "numeric_bindings": [
+          {
+            "claim_value": "",
+            "unit": "",
+            "role": "junction_hysteresis",
+            "evidence_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0",
+            "source_quote": "There is a ~10oC hysteresis.",
+            "value_kind": "typical"
+          }
+        ],
+        "qualifier_bindings": []
+      },
+      {
+        "claim_id": "claim_4",
+        "text_zh": "内部热关断电路可保护器件免受永久损坏，但超过绝对最大结温 150°C 可能损坏器件。",
+        "kind": "document_fact",
+        "product_ids": [
+          "MP4570"
+        ],
+        "evidence_ids": [
+          "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0004-0004:seq0064:structure-chunker-v1:4639c42065b845cc",
+          "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0016-0018:seq0126:structure-chunker-v1:eb9dc7cdbfd306c0"
+        ],
+        "anchors": [],
+        "numeric_bindings": [
+          {
+            "claim_value": "",
+            "unit": "",
+            "role": "absolute_maximum_vin",
+            "evidence_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0004-0004:seq0064:structure-chunker-v1:4639c42065b845cc",
+            "source_quote": "Junction Temperature ............................... 150°C",
+            "value_kind": "max"
+          },
+          {
+            "claim_value": "",
+            "unit": "",
+            "role": "junction_shutdown_trigger",
+            "evidence_id": "chunk:doc:mps-mp4570-datasheet:a89da141cb7c:0004-0004:seq0064:structure-chunker-v1:4639c42065b845cc",
+            "source_quote": "Exceeding these ratings may damage the device.",
+            "value_kind": "max"
+          }
+        ],
+        "qualifier_bindings": []
+      }
+    ],
+    "coverage": "complete",
+    "gaps": []
+  },
+  "issues": [
+    {
+      "code": "numeric_binding_missing",
+      "scope": "claim_1",
+      "detail": "claim 含数字但未声明 binding: 170°C"
+    },
+    {
+      "code": "numeric_binding_missing",
+      "scope": "claim_2",
+      "detail": "claim 含数字但未声明 binding: 160°C"
+    },
+    {
+      "code": "numeric_binding_missing",
+      "scope": "claim_3",
+      "detail": "claim 含数字但未声明 binding: 10°C"
+    },
+    {
+      "code": "numeric_binding_missing",
+      "scope": "claim_4",
+      "detail": "claim 含数字但未声明 binding: 150uA"
+    },
+    {
+      "code": "wrong_unit",
+      "scope": "claim_4",
+      "detail": "声明单位 ，原文单位 ['°C']"
+    }
+  ]
+}

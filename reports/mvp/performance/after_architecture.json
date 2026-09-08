@@ -1,0 +1,24 @@
+{
+  "recorded_at": "2026-09-08T08:00:00+08:00",
+  "phase": "after-architecture-changes",
+  "description": "Snapshot after Phase 3-4-8 architectural changes: deterministic intent fast path + strict profile default + persistent httpx.Client + ChatClient metrics_sink. Measured on the same 4-case probe as baseline.",
+  "artifacts": {
+    "probe_run": "reports/mvp/performance/phase8_strict_hybrid_persistent.json",
+    "phase4_strict": "reports/mvp/performance/phase4_strict.json"
+  },
+  "cases": 4,
+  "profile": "strict",
+  "retrieval_mode": "hybrid",
+  "num_ctx": 8192,
+  "audit_num_predict": 900,
+  "max_records": 4,
+  "status_counts": {"ANSWERED": 4},
+  "model_error": 0,
+  "insufficient_evidence": 0,
+  "citation_violations": 0,
+  "seconds": {
+    "count": 4, "total": 331.5, "mean": 82.9, "median": 100.2
+  },
+  "speedup_vs_baseline_per_question": "82.9s / 210s = 2.53x",
+  "note": "Persistent httpx saves ~5-15ms per chat call on localhost (negligible at this scale); the 2.53x is from the prompt contract + profile + evidence shrink work, not from httpx alone."
+}

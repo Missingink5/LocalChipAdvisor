@@ -8,6 +8,9 @@ class FakeIndex:
         self.by_id = {}
 
     def search(self, *args, **kwargs):
+        kwargs.pop("chat_model", None)
+        kwargs.pop("top_k", None)
+        kwargs.pop("mode", None)
         return [{
             "chunk_id": "allowed",
             "doc_id": "doc:fake",
@@ -29,9 +32,11 @@ class FakeChat:
         self._payloads = list(payloads)
         self.calls = []
 
-    def chat(self, system, user_payload, schema, num_predict=1200, temperature=0.0):
+    def chat(self, system, user_payload, schema, num_predict=1200, temperature=0.0,
+             **kwargs):
         self.calls.append({"system": system, "user_payload": user_payload,
-                           "schema": schema, "num_predict": num_predict})
+                           "schema": schema, "num_predict": num_predict,
+                           "stage": kwargs.get("stage")})
         if not self._payloads:
             return {}
         return self._payloads.pop(0)

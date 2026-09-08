@@ -11,22 +11,18 @@ AnswerDraft whose Chinese claims ARE the answer rendered to the user.
 """
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from .contracts import (
     ALLOWED_INTENT_KINDS,
     ALLOWED_REASONS,
+    ALLOWED_ROLES,
     ALLOWED_TOPICS,
     ALLOWED_VALUE_KINDS,
-    ALLOWED_ROLES,
     AnswerDraft,
-    AnswerReview,
-    Claim,
     EvidenceBundle,
     ResolvedIntent,
 )
-
 
 UNDERSTANDING_SYSTEM = """You analyze the user's latest question and (optionally) the
 clarification context the user is replying to. You never answer the question
@@ -119,13 +115,28 @@ Hard rules — ignoring them produces a rejected draft:
 2. Each EvidenceAnchor.quote MUST appear verbatim (after whitespace/soft-
    hyphen normalization) inside its evidence_id's text. Do not stitch
    fragments from different paragraphs together.
-3. NumericBinding.claim_value + unit + role + value_kind MUST match the
-   evidence. value_kind ∈ typical|min|max|range|nominal|unknown. If the
-   source says "typically" you MUST set value_kind=typical. If the source
-   says "absolute maximum" you MUST set value_kind=max.
-4. NumericBindings must list every numeric value (with its unit) that
-   appears in the Chinese claim text and originates from the cited
-   evidence. Missing a binding will fail validation.
+3. NumericBinding field contract (hard):
+   - claim_value = the bare number exactly as written in the claim text:
+     digits, decimal point and optional minus sign only (e.g. "170",
+     "10.5"). Never the unit, never empty.
+   - unit = the canonical unit symbol of that value: one of V, mV, A, mA,
+     uA, °C, °F, Hz, kHz, MHz, GHz, s, ms, us, ns, %. Never "oC", "C",
+     "μA", "µA", "μs" or empty.
+   - role + value_kind MUST match the evidence. value_kind ∈
+     typical|min|max|range|nominal|unknown. If the source says "typically"
+     you MUST set value_kind=typical. If the source says "absolute
+     maximum" you MUST set value_kind=max.
+4. Every numeric value that appears in the Chinese claim text and
+   originates from the cited evidence MUST be declared by exactly one
+   NumericBinding whose claim_value/unit carry that value and whose
+   source_quote contains that number verbatim. One binding per value;
+   do not declare a value twice and do not bind a value absent from the
+   claim text. claim_value/unit are REQUIRED: an empty string fails
+   validation and forces an expensive revision. Example: for a claim
+   sentence "结温超过 170°C 时关断", emit a binding like
+   {"claim_value": "170", "unit": "°C",
+    "role": "junction_shutdown_trigger", "evidence_id": "...",
+    "source_quote": "...(typically 170oC)...", "value_kind": "typical"}.
 5. Roles must match the source: a binding from "junction temperature"
    text cannot be ambient_temperature; a binding from "peak current"
    text cannot be continuous_output_current.
@@ -179,6 +190,7 @@ def generation_json_schema() -> dict[str, Any]:
             "claims": {
                 "type": "array",
                 "maxItems": 4,
+                "uniqueItems": True,
                 "items": {
                     "type": "object",
                     "properties": {
@@ -186,7 +198,7 @@ def generation_json_schema() -> dict[str, Any]:
                         "text_zh": {"type": "string", "maxLength": 400},
                         "kind": {"type": "string", "enum": ["document_fact", "rule_result"]},
                         "product_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
-                        "evidence_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
+                        "evidence_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 4, "uniqueItems": True},
                         "anchors": {
                             "type": "array",
                             "maxItems": 4,
@@ -206,8 +218,8 @@ def generation_json_schema() -> dict[str, Any]:
                             "items": {
                                 "type": "object",
                                 "properties": {
-                                    "claim_value": {"type": "string", "maxLength": 40},
-                                    "unit": {"type": "string", "maxLength": 20},
+                                    "claim_value": {"type": "string", "minLength": 1, "maxLength": 40},
+                                    "unit": {"type": "string", "minLength": 1, "maxLength": 20},
                                     "role": {"type": "string", "maxLength": 60},
                                     "evidence_id": {"type": "string"},
                                     "source_quote": {"type": "string", "maxLength": 400},
@@ -369,6 +381,13 @@ be resolved in the revised draft.
 You may NOT introduce new claims that are not supported by the same
 EvidenceBundle. You may shorten, rephrase, drop a claim, or correct a
 numeric binding; you may not widen the scope.
+
+Schema rules (a draft that violates them is rejected fail-closed):
+- Every claim_id must be unique within the draft. Either preserve the
+  original claim_id for an unchanged claim or assign a new unique one
+  (e.g. claim_<short_slug>) when the claim is rewritten. Never emit two
+  claims with the same claim_id.
+- claim_value and unit are REQUIRED and non-empty in every NumericBinding.
 
 Output JSON only, matching AnswerDraftSchema (same as the generation prompt).
 """

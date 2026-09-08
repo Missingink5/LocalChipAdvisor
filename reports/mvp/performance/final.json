@@ -1,0 +1,49 @@
+{
+  "recorded_at": "2026-09-08T08:30:00+08:00",
+  "phase": "final",
+  "description": "Final snapshot: all performance-fix changes applied. strict + hybrid + persistent httpx + max_records=4 + num_ctx=8192 + num_predict 2200/900 + deterministic intent fast path.",
+  "artifacts": {
+    "probe_run": "reports/mvp/performance/phase8_strict_hybrid_persistent.json",
+    "fourteen_case_run": "reports/mvp/performance/phase10_strict_14cases.json",
+    "phase10_decision": "reports/mvp/performance/_phase10_decision.txt"
+  },
+  "probe": {
+    "cases": 4,
+    "profile": "strict",
+    "retrieval_mode": "hybrid",
+    "status_counts": {"ANSWERED": 4},
+    "model_error": 0,
+    "insufficient_evidence": 0,
+    "citation_violations": 0,
+    "seconds": {"count": 4, "total": 331.5, "mean": 82.9, "median": 100.2}
+  },
+  "fourteen_case": {
+    "cases": 14,
+    "profile": "strict",
+    "retrieval_mode": "hybrid",
+    "status_counts": {"ANSWERED": 14},
+    "status_matches": 14,
+    "model_error": 0,
+    "insufficient_evidence": 0,
+    "citation_violations": 0,
+    "seconds": {"count": 14, "total": 1110.6, "mean": 79.3, "median": 69.8, "min": 42.2, "max": 158.6}
+  },
+  "speedup_summary": {
+    "baseline_per_question_s": 210,
+    "baseline_14_case_minutes": 50,
+    "after_architecture_per_question_s": 82.9,
+    "after_context_per_question_s": 82.7,
+    "final_probe_per_question_s": 82.9,
+    "final_14_case_per_question_s": 79.3,
+    "final_14_case_total_minutes": 18.5,
+    "speedup_vs_baseline_probe": "82.9/210 = 2.53x",
+    "speedup_vs_baseline_14case": "79.3/210 = 2.65x",
+    "speedup_vs_baseline_14case_total": "50 min / 18.5 min = 2.70x"
+  },
+  "quality_gates": {
+    "pytest": "397 passed (incl. 14 new contract tests)",
+    "ruff_checked_files": "all changed files clean",
+    "git_diff_check": "clean"
+  },
+  "new_artifact": "tests/test_mvp_perf_contracts.py (14 contract tests)"
+}
