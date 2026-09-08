@@ -154,6 +154,7 @@ class ChipStore:
             )
 
     def search_fts(self, query: str, *, product_ids: list[str] | None = None,
+                   document_ids: list[str] | None = None,
                    limit: int = 20) -> list[Evidence]:
         terms = [t for t in _fts_terms(query) if t]
         if not terms:
@@ -166,6 +167,9 @@ class ChipStore:
         if product_ids:
             sql += f" AND c.product_id IN ({','.join('?' for _ in product_ids)})"
             args.extend(product_ids)
+        if document_ids:
+            sql += f" AND c.document_id IN ({','.join('?' for _ in document_ids)})"
+            args.extend(document_ids)
         sql += " ORDER BY bm25(evidence_fts) LIMIT ?"
         args.append(limit)
         return [_row_to_evidence(r) for r in self.conn.execute(sql, args).fetchall()]
@@ -174,6 +178,14 @@ class ChipStore:
         rows = self.conn.execute(
             "SELECT * FROM evidence_chunks WHERE product_id=? AND reviewed=1 ORDER BY page,evidence_id",
             (product_id,),
+        ).fetchall()
+        return [_row_to_evidence(r) for r in rows]
+
+    def evidence_for_field(self, product_id: str, field_name: str) -> list[Evidence]:
+        rows = self.conn.execute(
+            """SELECT * FROM evidence_chunks
+            WHERE product_id=? AND field_name=? AND reviewed=1
+            ORDER BY page,evidence_id""", (product_id, field_name)
         ).fetchall()
         return [_row_to_evidence(r) for r in rows]
 
@@ -193,18 +205,20 @@ class ChipStore:
         self.conn.commit()
 
     def get_embeddings_for_filtered_chunks(
-        self, product_ids: list[str], model: str
+        self, product_ids: list[str], model: str, document_ids: list[str] | None = None
     ) -> list[tuple[Evidence, np.ndarray]]:
         if not product_ids:
             return []
         marks = ",".join("?" for _ in product_ids)
-        rows = self.conn.execute(
-            f"""SELECT c.*, e.embedding, e.embedding_dimension
+        sql = f"""SELECT c.*, e.embedding, e.embedding_dimension
             FROM evidence_chunks c JOIN chunk_embeddings e ON e.evidence_id=c.evidence_id
             WHERE c.product_id IN ({marks}) AND c.reviewed=1 AND e.embedding_model=?
-            AND e.chunk_hash=c.chunk_hash""",
-            [*product_ids, model],
-        ).fetchall()
+            AND e.chunk_hash=c.chunk_hash"""
+        args = [*product_ids, model]
+        if document_ids:
+            sql += f" AND c.document_id IN ({','.join('?' for _ in document_ids)})"
+            args.extend(document_ids)
+        rows = self.conn.execute(sql, args).fetchall()
         return [(_row_to_evidence(r), np.frombuffer(r["embedding"], dtype=np.float32).copy()) for r in rows]
 
     def cache_query_embedding(self, query: str, model: str, vector: list[float]) -> None:

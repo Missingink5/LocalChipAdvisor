@@ -54,6 +54,27 @@ def test_topic_gate_keeps_thermal_evidence_out_of_short_circuit_answer(tmp_path)
     store.close()
 
 
+def test_colloquial_mixed_language_thermal_query_finds_otp(tmp_path):
+    store = ChipStore(tmp_path / "thermal.db")
+    store.init_db()
+    store.upsert_product(Product(product_id="a", part_number="DEMO-A-001", category="DC-DC",
+                                 topology="Buck", reviewed=True, datasheet_id="d"))
+    thermal = Evidence(evidence_id="thermal", product_id="a", document_id="d", page=2,
+                       field_name="otp", text="thermal shutdown protection restart",
+                       reviewed=True)
+    unrelated = Evidence(evidence_id="other", product_id="a", document_id="d", page=3,
+                         text="typical performance characteristics", reviewed=True)
+    store.insert_evidence(thermal)
+    store.insert_evidence(unrelated)
+    store.save_chunk_embedding("thermal", "fake", [1, 0])
+    store.save_chunk_embedding("other", "fake", [0, 1])
+    parsed = ParsedQuery(raw_query="DEMO-A-001 太热会 shut down 吗？", intent=Intent.PART_QA,
+                         part_numbers=["DEMO-A-001"], semantic_query="太热会 shut down 吗？")
+    hits = hybrid_search(store, parsed, FakeEmbedder())
+    assert [hit.evidence.evidence_id for hit in hits] == ["thermal"]
+    store.close()
+
+
 def test_rrf_rewards_documents_in_both_lists():
     scores = rrf_fusion(["a", "b"], ["b", "c"])
     assert scores["b"] > scores["a"]

@@ -40,6 +40,9 @@ def make_advisor(tmp_path):
     store.insert_evidence(Evidence(evidence_id="e1", product_id="a", document_id="d1",
                                    page=3, section="Protection", text="short circuit protection",
                                    reviewed=True))
+    store.insert_evidence(Evidence(evidence_id="vin", product_id="a", document_id="d1",
+                                   page=1, section="Operating Conditions", field_name="vin_max_v",
+                                   text="Maximum operating input voltage is 36 V.", reviewed=True))
     return store, FakeChat(), NoEmbed()
 
 

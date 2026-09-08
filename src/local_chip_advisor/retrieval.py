@@ -25,10 +25,13 @@ def hybrid_search(
     *, limit: int = 6,
 ) -> list[SearchHit]:
     product_ids: list[str] = []
+    document_ids: list[str] = []
     for part in parsed.part_numbers:
         product = store.get_product_by_part_number(part)
         if product:
             product_ids.append(product.product_id)
+            if product.datasheet_id:
+                document_ids.append(product.datasheet_id)
     if parsed.part_numbers and not product_ids:
         return []
 
@@ -36,11 +39,14 @@ def hybrid_search(
     for part in parsed.part_numbers:
         query = query.replace(part, "")
     query = _expand_query(query)
-    fts = store.search_fts(query, product_ids=product_ids or None, limit=20)
+    fts = store.search_fts(query, product_ids=product_ids or None,
+                           document_ids=document_ids or None, limit=20)
     use_vector = _semantic_question(query) or len(fts) < 5
     vector_ranked = []
     if use_vector and embedder and product_ids:
-        stored = store.get_embeddings_for_filtered_chunks(product_ids, embedder.model)
+        stored = store.get_embeddings_for_filtered_chunks(
+            product_ids, embedder.model, document_ids=document_ids or None
+        )
         if stored:
             query_vector = store.load_cached_query_embedding(query, embedder.model)
             if query_vector is None:
@@ -81,6 +87,8 @@ def _expand_query(query: str) -> str:
         "短路": "short circuit hiccup protection",
         "恢复": "recovery retry restart",
         "过温": "thermal shutdown over temperature",
+        "太热": "thermal shutdown over temperature",
+        "过热": "thermal shutdown over temperature",
         "轻载": "light load pulse skipping",
         "浪涌": "surge transient",
     }
@@ -95,8 +103,14 @@ def _topic_fields(query: str) -> set[str]:
     topics: set[str] = set()
     if "短路" in lowered or "short circuit" in lowered or "hiccup" in lowered:
         topics.add("short_circuit_protection")
-    if "过温" in lowered or "thermal" in lowered or "over temperature" in lowered:
+    if any(term in lowered for term in (
+        "过温", "太热", "过热", "thermal", "over temperature",
+    )):
         topics.add("otp")
+    if "过压" in lowered or "over-voltage" in lowered or "over voltage" in lowered or "ovp" in lowered:
+        topics.add("ovp")
+    if "欠压" in lowered or "under-voltage" in lowered or "under voltage" in lowered or "uvlo" in lowered:
+        topics.add("uvlo")
     return topics
 
 

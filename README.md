@@ -29,15 +29,17 @@ $env:DEEPSEEK_API_KEY="your-api-key"
 $env:LCA_CHAT_MODEL="deepseek-v4-flash"  # 可选
 .\.venv\python.exe -m pip install -e ".[dev]"
 ollama pull qwen3-embedding:0.6b
-.\.venv\python.exe scripts\ingest.py
+.\.venv\python.exe scripts\ingest.py --reset --embed
 ```
 
-也可以在仓库根目录创建本地 `.env`，写入 `DEEPSEEK_API_KEY=你的key`；程序会自动读取。`.env` 已被 Git 忽略。示例 `DEMO-*` 是虚构测试数据，不代表真实厂商参数。不要把真实 key 写入 `.env.example` 或 Git。
+也可以在仓库根目录创建本地 `.env`，写入 `DEEPSEEK_API_KEY=你的key`；程序会自动读取。`.env` 已被 Git 忽略。不要把真实 key 写入 `.env.example` 或 Git。
 
-如需处理已放入 `data\datasheets\` 的 PDF 并建立本地向量：
+当前清单是 `data\products.json`：3 颗芯片（MP4570、MPQ4570、MP023）和 4 份文档。EV4570-F-01A 是评估板资料，只作为 MP4570 的补充文档，不作为芯片候选。PDF 路径和 SHA-256 均由清单固定。
+
+重新处理 `data\raw\mps` 中的 PDF 并建立本地向量：
 
 ```powershell
-.\.venv\python.exe scripts\ingest.py --embed
+.\.venv\python.exe scripts\ingest.py --reset --embed
 ```
 
 脚本不联网下载资料，不做 OCR，默认也不会计算 embedding。
@@ -46,8 +48,8 @@ ollama pull qwen3-embedding:0.6b
 
 ```powershell
 .\.venv\python.exe scripts\check.py
-.\.venv\python.exe scripts\demo.py "DEMO-AUTO-001 最大输入电压是多少？"
-.\.venv\python.exe scripts\demo.py "DEMO-AUTO-001 短路后如何恢复？"
+.\.venv\python.exe scripts\demo.py "MP4570 最大输入电压是多少？"
+.\.venv\python.exe scripts\demo.py "MP4570 短路以后怎么保护？"
 .\.venv\python.exe -m pytest -q -p no:cacheprovider
 ```
 

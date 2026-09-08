@@ -54,17 +54,37 @@ def main() -> int:
         for path in (db_path, Path(str(db_path) + "-shm"), Path(str(db_path) + "-wal")):
             path.unlink(missing_ok=True)
     payload = json.loads(Path(args.products).read_text(encoding="utf-8"))
-    store = ChipStore(db_path)
-    store.init_db()
-    for raw in payload["products"]:
-        store.upsert_product(Product.model_validate(raw))
-
-    chunk_count = 0
+    documents = {item["document_id"]: item for item in payload["documents"]}
+    document_hashes: dict[str, str] = {}
     for document in payload["documents"]:
         pdf_path = ROOT / document["path"]
         actual_hash = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
         if actual_hash != document["sha256"]:
             raise RuntimeError(f"SHA-256 mismatch: {pdf_path}")
+        document_hashes[document["document_id"]] = actual_hash
+    store = ChipStore(db_path)
+    store.init_db()
+    for raw in payload["products"]:
+        store.upsert_product(Product.model_validate(raw))
+    for raw in payload.get("evidence", []):
+        document = documents[raw["document_id"]]
+        with pymupdf.open(ROOT / document["path"]) as pdf:
+            page_text = " ".join(pdf[raw["page"] - 1].get_text().split())
+        position = page_text.casefold().find(raw["match"].casefold())
+        if position < 0:
+            raise RuntimeError(
+                f"Evidence anchor not found: {raw['evidence_id']} page {raw['page']}"
+            )
+        start = max(0, position - 100)
+        text = page_text[start:position + len(raw["match"]) + 500]
+        evidence = {key: value for key, value in raw.items() if key != "match"}
+        evidence["text"] = text
+        store.insert_evidence(Evidence.model_validate(evidence))
+
+    chunk_count = 0
+    for document in payload["documents"]:
+        pdf_path = ROOT / document["path"]
+        actual_hash = document_hashes[document["document_id"]]
         product = next(item for item in payload["products"]
                        if item["product_id"] == document["product_id"])
         with pymupdf.open(pdf_path) as pdf:
@@ -106,7 +126,8 @@ def main() -> int:
                 embedded += 1
         embedder.close()
     print(f"数据库：{db_path}")
-    print(f"产品：{len(payload['products'])}；文档：{len(payload['documents'])}；证据块：{chunk_count}；新增向量：{embedded}")
+    total_chunks = store.conn.execute("SELECT count(*) FROM evidence_chunks").fetchone()[0]
+    print(f"产品：{len(payload['products'])}；文档：{len(payload['documents'])}；证据块：{total_chunks}；新增向量：{embedded}")
     store.close()
     return 0
 
